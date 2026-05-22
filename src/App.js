@@ -594,7 +594,7 @@ function ChatScreen({ seed, setSeed, online }) {
   const [preview, setPreview] = useState("");
   const bottom = useRef();
 
-  useEffect(() => { if(seed){ setInput(seed); setSeed(null); } }, [seed]);
+  useEffect(() => { if(seed){ setInput(seed); setSeed(null); } }, [seed, setSeed]);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs]);
 
   function handleInput(val) {
