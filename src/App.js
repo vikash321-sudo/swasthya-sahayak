@@ -163,31 +163,37 @@ async function askAI(text, history) {
   const converted = isRoman(text) ? romanToNepali(text) : null;
   const finalText = converted ? `${text} (अर्थात्: ${converted})` : text;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.REACT_APP_OPENAI_KEY}`
+    },
     body: JSON.stringify({
-      model:"claude-sonnet-4-20250514",
-      max_tokens:800,
-      system:`तपाईं "स्वास्थ्य सहायक" हुनुहुन्छ — नेपालको ग्रामीण जनताको लागि मित्रवत् AI स्वास्थ्य सहायक।
-
+      model: "gpt-4o-mini",
+      max_tokens: 800,
+      messages: [
+        {
+          role: "system",
+          content: `तपाईं "स्वास्थ्य सहायक" हुनुहुन्छ — नेपालको ग्रामीण जनताको लागि मित्रवत् AI स्वास्थ्य सहायक।
 नियमहरू:
 - सधैँ सरल नेपाली भाषामा जवाफ दिनुहोस्
 - कहिल्यै रोगको पक्का निदान नगर्नुहोस्
 - सधैँ वास्तविक डाक्टर देखाउन सुझाव दिनुहोस्
 - आपतकालमा तुरुन्त 102 भन्नुहोस्
-- छोटो, सरल र मायालु तरिकाले जवाफ दिनुहोस्
 - Roman मा लेखे पनि नेपालीमा जवाफ दिनुहोस्
-
 जवाफको ढाँचा:
 🩺 के भइरहेको छ: [एक वाक्य]
 ✅ के गर्ने: [२-३ कदम]
-⚠️ डाक्टर कहिले: [कहिले जाने]`,
-      messages:[...history, { role:"user", content: finalText }]
+⚠️ डाक्टर कहिले: [कहिले जाने]`
+        },
+        ...history,
+        { role: "user", content: finalText }
+      ]
     })
   });
   const data = await res.json();
-  return data.content?.[0]?.text || "माफ गर्नुहोस्, जवाफ दिन सकिएन।";
+  return data.choices?.[0]?.message?.content || "माफ गर्नुहोस्, जवाफ दिन सकिएन।";
 }
 
 // ─── Reusable Components ────────────────────────────────────────
