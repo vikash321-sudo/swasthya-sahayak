@@ -1,4 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// ─── Supabase ──────────────────────────────────────────────────
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_KEY
+);
 
 const C = {
   bg:"#F0F4F8", white:"#FFFFFF",
@@ -10,7 +17,7 @@ const C = {
   warning:"#F5A623", warningLight:"#FFF8ED",
   danger:"#E53E3E", dangerLight:"#FFF5F5",
   text:"#1A202C", textMid:"#4A5568", textLight:"#A0AEC0",
-  border:"#E2E8F0", borderDark:"#CBD5E0",
+  border:"#E2E8F0",
 };
 
 const WORD_MAP = {
@@ -44,61 +51,49 @@ const SYMPTOMS = [
     roman:["tauko dukhxa","tauko dukhcha","headache","tauko"],
     causes:["माइग्रेन","तनाव","डिहाइड्रेसन","ज्वरो"],
     advice:"पानी पिउनुहोस् र अँध्यारो कोठामा आराम गर्नुहोस्। पारासिटामोल लिन सक्नुहुन्छ।",
-    warning:"अचानक धेरै तीव्र दुखाई भयो भने तुरुन्त अस्पताल जानुहोस्।",
-    severity:"low" },
+    warning:"अचानक धेरै तीव्र दुखाई भयो भने तुरुन्त अस्पताल जानुहोस्।", severity:"low" },
   { id:"fever", icon:"🌡️", nepali:"ज्वरो आउँछ", en:"Fever",
     roman:["jworo","jwaro","joro","fever"],
     causes:["फ्लु","म्यालेरिया","टाइफाइड","डेंगी"],
     advice:"धेरै पानी र ORS पिउनुहोस्। हल्का कपडा लगाउनुहोस्।",
-    warning:"३ दिनभन्दा बढी ज्वरो रहे डाक्टर देखाउनुहोस्।",
-    severity:"medium" },
+    warning:"३ दिनभन्दा बढी ज्वरो रहे डाक्टर देखाउनुहोस्।", severity:"medium" },
   { id:"stomach", icon:"🫃", nepali:"पेट दुख्छ", en:"Stomach Pain",
     roman:["pet dukhxa","pet dukhcha","stomach pain"],
     causes:["ग्यास्ट्रिक","अपच","फूड पोइजनिङ"],
     advice:"हल्का तातो पानी पिउनुहोस्। भारी खाना नखानुहोस्।",
-    warning:"दायाँ तल्लो पेट कडा भयो भने तुरुन्त अस्पताल जानुहोस्।",
-    severity:"medium" },
+    warning:"दायाँ तल्लो पेट कडा भयो भने तुरुन्त अस्पताल जानुहोस्।", severity:"medium" },
   { id:"breathing", icon:"🫁", nepali:"सास फेर्न गाह्रो", en:"Breathing Difficulty",
-    roman:["sas ferna garho","breathing problem","sas pherna garo"],
+    roman:["sas ferna garho","breathing problem"],
     causes:["अस्थमा","निमोनिया","COVID-19"],
     advice:"सिधा बसेर ताजा हावा लिनुहोस्।",
-    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।",
-    severity:"high" },
+    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।", severity:"high" },
   { id:"cough", icon:"😮‍💨", nepali:"खाँसी लाग्छ", en:"Cough",
     roman:["khansi","khaasi","cough","khoki"],
     causes:["रुघाखोकी","ब्रोन्काइटिस","TB"],
     advice:"तातो पानीमा मह र अदुवा मिसाएर पिउनुहोस्।",
-    warning:"२ हप्ताभन्दा बढी खोकी भए TB परीक्षण गराउनुहोस्।",
-    severity:"low" },
+    warning:"२ हप्ताभन्दा बढी खोकी भए TB परीक्षण गराउनुहोस्।", severity:"low" },
   { id:"vomiting", icon:"🤢", nepali:"उल्टी हुन्छ", en:"Vomiting",
     roman:["ulti","banti","vomiting"],
     causes:["फूड पोइजनिङ","ग्यास्ट्रिक","माइग्रेन"],
     advice:"ORS वा नुन-चिनीको पानी बिस्तारै पिउनुहोस्।",
-    warning:"रगत आयो भने तुरुन्त अस्पताल जानुहोस्।",
-    severity:"medium" },
+    warning:"रगत आयो भने तुरुन्त अस्पताल जानुहोस्।", severity:"medium" },
   { id:"chest", icon:"💔", nepali:"छाती दुख्छ", en:"Chest Pain",
     roman:["chhati dukhxa","chest pain","chati"],
     causes:["मुटुरोग","ग्यास्ट्रिक","निमोनिया"],
     advice:"बिरामीलाई सुताउनुहोस् र शान्त राख्नुहोस्।",
-    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।",
-    severity:"high" },
+    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।", severity:"high" },
   { id:"dizzy", icon:"😵", nepali:"चक्कर लाग्छ", en:"Dizziness",
     roman:["chakkar","dizzy","chakkar lagxa"],
     causes:["रक्तचाप","एनिमिया","डिहाइड्रेसन"],
     advice:"बसी आराम गर्नुहोस्। पानी पिउनुहोस्।",
-    warning:"बेहोस भयो भने डाक्टर देखाउनुहोस्।",
-    severity:"low" },
+    warning:"बेहोस भयो भने डाक्टर देखाउनुहोस्।", severity:"low" },
 ];
 
 const DOCTORS = [
-  { name:"डा. सुनिता श्रेष्ठ", initials:"स", spec:"सामान्य चिकित्सक",
-    avail:true, rating:4.9, reviews:284, fee:"NPR ५००", wait:"अहिले", exp:"१२ वर्ष", color:C.primary },
-  { name:"डा. रमेश थापा", initials:"र", spec:"बाल रोग विशेषज्ञ",
-    avail:true, rating:4.8, reviews:196, fee:"NPR ७००", wait:"२० मि.", exp:"८ वर्ष", color:C.secondary },
-  { name:"डा. प्रिया गुरुङ", initials:"प", spec:"स्त्री रोग विशेषज्ञ",
-    avail:false, rating:4.9, reviews:341, fee:"NPR ८००", wait:"भोलि", exp:"१५ वर्ष", color:C.purple },
-  { name:"डा. अमित पाण्डे", initials:"अ", spec:"हड्डी विशेषज्ञ",
-    avail:true, rating:4.7, reviews:158, fee:"NPR ६००", wait:"१ घण्टा", exp:"१० वर्ष", color:C.accent },
+  { name:"डा. सुनिता श्रेष्ठ", initials:"स", spec:"सामान्य चिकित्सक", avail:true, rating:4.9, reviews:284, fee:"NPR ५००", wait:"अहिले", exp:"१२ वर्ष", color:C.primary },
+  { name:"डा. रमेश थापा", initials:"र", spec:"बाल रोग विशेषज्ञ", avail:true, rating:4.8, reviews:196, fee:"NPR ७००", wait:"२० मि.", exp:"८ वर्ष", color:C.secondary },
+  { name:"डा. प्रिया गुरुङ", initials:"प", spec:"स्त्री रोग विशेषज्ञ", avail:false, rating:4.9, reviews:341, fee:"NPR ८००", wait:"भोलि", exp:"१५ वर्ष", color:C.purple },
+  { name:"डा. अमित पाण्डे", initials:"अ", spec:"हड्डी विशेषज्ञ", avail:true, rating:4.7, reviews:158, fee:"NPR ६००", wait:"१ घण्टा", exp:"१० वर्ष", color:C.accent },
 ];
 
 async function askAI(text, history) {
@@ -106,10 +101,7 @@ async function askAI(text, history) {
   const finalText = converted ? `${text} (नेपालीमा: ${converted})` : text;
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "Authorization":`Bearer ${process.env.REACT_APP_OPENAI_KEY}`
-    },
+    headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${process.env.REACT_APP_OPENAI_KEY}` },
     body: JSON.stringify({
       model:"gpt-4o-mini", max_tokens:600,
       messages:[
@@ -128,13 +120,10 @@ async function askAI(text, history) {
   return data.choices?.[0]?.message?.content || "माफ गर्नुहोस्, जवाफ दिन सकिएन।";
 }
 
+// ─── Shared UI Components ──────────────────────────────────────
 function Avatar({ initials, color, size=44 }) {
   return (
-    <div style={{
-      width:size, height:size, borderRadius:"50%", background:color,
-      display:"flex", alignItems:"center", justifyContent:"center",
-      color:"#fff", fontSize:size*0.35, fontWeight:700, flexShrink:0,
-    }}>{initials}</div>
+    <div style={{ width:size, height:size, borderRadius:"50%", background:color, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:size*0.35, fontWeight:700, flexShrink:0 }}>{initials}</div>
   );
 }
 
@@ -148,64 +137,36 @@ function StarRating({ rating }) {
 }
 
 function SeverityTag({ level }) {
-  const map = {
-    low:    { label:"सामान्य",        bg:C.successLight, color:C.success },
-    medium: { label:"ध्यान दिनुहोस्", bg:C.warningLight, color:C.warning },
-    high:   { label:"तत्काल!",        bg:C.dangerLight,  color:C.danger  },
-  };
+  const map = { low:{ label:"सामान्य", bg:C.successLight, color:C.success }, medium:{ label:"ध्यान दिनुहोस्", bg:C.warningLight, color:C.warning }, high:{ label:"तत्काल!", bg:C.dangerLight, color:C.danger } };
   const { label, bg, color } = map[level];
-  return (
-    <span style={{
-      background:bg, color, borderRadius:6, padding:"3px 10px",
-      fontSize:11, fontWeight:700, letterSpacing:0.3, display:"inline-block"
-    }}>{label}</span>
-  );
+  return <span style={{ background:bg, color, borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, display:"inline-block" }}>{label}</span>;
 }
 
 function SectionHeader({ title, action, onAction }) {
   return (
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
       <span style={{ fontSize:15, fontWeight:700, color:C.text }}>{title}</span>
-      {action && (
-        <button onClick={onAction} style={{
-          background:"none", border:"none", color:C.primary,
-          fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit"
-        }}>{action} →</button>
-      )}
+      {action && <button onClick={onAction} style={{ background:"none", border:"none", color:C.primary, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>{action} →</button>}
     </div>
   );
 }
 
 function BottomNav({ tab, setTab }) {
   const items = [
-    { id:"home",    emoji:"🏠", label:"घर" },
-    { id:"check",   emoji:"🩺", label:"जाँच" },
-    { id:"chat",    emoji:"💬", label:"सहायक" },
+    { id:"home", emoji:"🏠", label:"घर" },
+    { id:"check", emoji:"🩺", label:"जाँच" },
+    { id:"chat", emoji:"💬", label:"सहायक" },
     { id:"doctors", emoji:"👨‍⚕️", label:"डाक्टर" },
-    { id:"tips",    emoji:"💡", label:"सुझाव" },
+    { id:"profile", emoji:"👤", label:"प्रोफाइल" },
   ];
   return (
-    <div style={{
-      position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
-      width:"100%", maxWidth:480, background:C.white,
-      borderTop:`1px solid ${C.border}`, display:"flex", zIndex:100,
-      boxShadow:"0 -2px 10px rgba(0,0,0,0.06)"
-    }}>
+    <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:C.white, borderTop:`1px solid ${C.border}`, display:"flex", zIndex:100, boxShadow:"0 -2px 10px rgba(0,0,0,0.06)" }}>
       {items.map(it => {
         const active = tab === it.id;
         return (
-          <button key={it.id} onClick={() => setTab(it.id)} style={{
-            flex:1, padding:"8px 4px 10px", background:"none",
-            border:"none", cursor:"pointer",
-            display:"flex", flexDirection:"column", alignItems:"center", gap:3,
-            borderTop:`2px solid ${active ? C.primary : "transparent"}`,
-            transition:"border-color 0.2s"
-          }}>
+          <button key={it.id} onClick={() => setTab(it.id)} style={{ flex:1, padding:"8px 4px 10px", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, borderTop:`2px solid ${active?C.primary:"transparent"}`, transition:"border-color 0.2s" }}>
             <span style={{ fontSize:20 }}>{it.emoji}</span>
-            <span style={{
-              fontSize:9, fontWeight:active?700:400,
-              color:active?C.primary:C.textLight, fontFamily:"inherit"
-            }}>{it.label}</span>
+            <span style={{ fontSize:9, fontWeight:active?700:400, color:active?C.primary:C.textLight, fontFamily:"inherit" }}>{it.label}</span>
           </button>
         );
       })}
@@ -213,185 +174,264 @@ function BottomNav({ tab, setTab }) {
   );
 }
 
-// ─── VOICE INPUT COMPONENT ─────────────────────────────────────
+// ─── Voice Input ───────────────────────────────────────────────
 function VoiceInput({ input, setInput, onSend, loading }) {
   const [listening, setListening] = useState(false);
   const [voiceError, setVoiceError] = useState("");
-  const recognitionRef = useRef(null);
+  const recRef = useRef(null);
 
   function startVoice() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setVoiceError("Voice support छैन। Chrome प्रयोग गर्नुहोस्।");
-      setTimeout(() => setVoiceError(""), 3000);
-      return;
-    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setVoiceError("Voice support छैन। Chrome प्रयोग गर्नुहोस्।"); setTimeout(()=>setVoiceError(""),3000); return; }
     setVoiceError("");
-    const recognition = new SpeechRecognition();
-    // Try Nepali first, fallback to English
-    recognition.lang = "ne-NP";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = (e) => {
+    const r = new SR();
+    r.lang = "ne-NP"; r.interimResults = false; r.maxAlternatives = 1;
+    recRef.current = r;
+    r.onstart = () => setListening(true);
+    r.onend = () => setListening(false);
+    r.onerror = (e) => {
       setListening(false);
       if (e.error === "language-not-supported") {
-        // Retry with English if Nepali not supported
-        const r2 = new SpeechRecognition();
-        r2.lang = "en-US";
-        r2.interimResults = false;
-        r2.onstart = () => setListening(true);
-        r2.onend = () => setListening(false);
-        r2.onerror = () => setListening(false);
-        r2.onresult = (e2) => {
-          const transcript = e2.results[0][0].transcript;
-          setInput(transcript);
-        };
-        recognitionRef.current = r2;
-        r2.start();
-      } else {
-        setVoiceError("माइक्रोफोन अनुमति दिनुहोस्।");
-        setTimeout(() => setVoiceError(""), 3000);
-      }
+        const r2 = new SR(); r2.lang = "en-US"; r2.interimResults = false;
+        r2.onstart=()=>setListening(true); r2.onend=()=>setListening(false); r2.onerror=()=>setListening(false);
+        r2.onresult=(e2)=>setInput(e2.results[0][0].transcript);
+        recRef.current=r2; r2.start();
+      } else { setVoiceError("माइक्रोफोन अनुमति दिनुहोस्।"); setTimeout(()=>setVoiceError(""),3000); }
     };
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setInput(transcript);
-    };
-    recognition.start();
+    r.onresult = (e) => setInput(e.results[0][0].transcript);
+    r.start();
   }
 
-  function stopVoice() {
-    recognitionRef.current?.stop();
-    setListening(false);
-  }
+  function stopVoice() { recRef.current?.stop(); setListening(false); }
 
   return (
     <div>
-      {voiceError && (
-        <div style={{
-          marginBottom:6, padding:"5px 12px", background:C.dangerLight,
-          borderRadius:8, fontSize:12, color:C.danger, fontWeight:500
-        }}>⚠️ {voiceError}</div>
-      )}
-      {listening && (
-        <div style={{
-          marginBottom:6, padding:"8px 14px", background:C.primaryLight,
-          borderRadius:10, fontSize:12, color:C.primary, fontWeight:600,
-          display:"flex", alignItems:"center", gap:8
-        }}>
-          <span style={{ animation:"voicePulse 0.8s infinite", display:"inline-block", fontSize:16 }}>🎤</span>
-          सुनिरहेको छु... बोल्नुहोस्
-        </div>
-      )}
+      {voiceError && <div style={{ marginBottom:6, padding:"5px 12px", background:C.dangerLight, borderRadius:8, fontSize:12, color:C.danger }}>{voiceError}</div>}
+      {listening && <div style={{ marginBottom:6, padding:"8px 14px", background:C.primaryLight, borderRadius:10, fontSize:12, color:C.primary, fontWeight:600, display:"flex", alignItems:"center", gap:8 }}><span style={{ animation:"voicePulse 0.8s infinite", display:"inline-block" }}>🎤</span>सुनिरहेको छु... बोल्नुहोस्</div>}
       <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key==="Enter" && onSend()}
-          placeholder={listening ? "सुनिरहेको छु..." : "tauko dukhxa... वा बोल्नुहोस् 🎤"}
-          style={{
-            flex:1, border:`1.5px solid ${listening ? C.primary : C.border}`,
-            borderRadius:24, padding:"11px 16px", fontSize:13,
-            fontFamily:"inherit", color:C.text, outline:"none", background:C.bg,
-            transition:"border-color 0.2s"
-          }}
-          onFocus={e => e.target.style.borderColor=C.primary}
-          onBlur={e => { if (!listening) e.target.style.borderColor=C.border; }}
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onSend()}
+          placeholder={listening?"सुनिरहेको छु...":"tauko dukhxa... वा बोल्नुहोस् 🎤"}
+          style={{ flex:1, border:`1.5px solid ${listening?C.primary:C.border}`, borderRadius:24, padding:"11px 16px", fontSize:13, fontFamily:"inherit", color:C.text, outline:"none", background:C.bg }}
+          onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>{if(!listening)e.target.style.borderColor=C.border;}}
         />
-        {/* Mic button */}
-        <button
-          onClick={listening ? stopVoice : startVoice}
-          title={listening ? "रोक्नुहोस्" : "बोल्नुहोस्"}
-          style={{
-            width:46, height:46, borderRadius:"50%", flexShrink:0,
-            background: listening ? C.dangerLight : C.primaryLight,
-            border: `2px solid ${listening ? C.danger : C.primary}`,
-            cursor:"pointer", fontSize:20,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            transition:"all 0.2s",
-            animation: listening ? "voicePulse 1s infinite" : "none",
-            boxShadow: listening ? `0 0 0 4px ${C.danger}22` : "none"
-          }}>
-          {listening ? "⏹" : "🎤"}
+        <button onClick={listening?stopVoice:startVoice} style={{ width:46, height:46, borderRadius:"50%", flexShrink:0, background:listening?C.dangerLight:C.primaryLight, border:`2px solid ${listening?C.danger:C.primary}`, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", animation:listening?"voicePulse 1s infinite":"none" }}>
+          {listening?"⏹":"🎤"}
         </button>
-        {/* Send button */}
-        <button
-          onClick={onSend}
-          disabled={loading || !input.trim()}
-          style={{
-            width:46, height:46, borderRadius:"50%", flexShrink:0,
-            background: input.trim() && !loading ? C.primary : C.border,
-            border:"none", cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            color:"#fff", fontSize:16, transition:"background 0.2s",
-            boxShadow: input.trim() && !loading ? `0 4px 12px ${C.primary}44` : "none"
-          }}>
-          ➤
+        <button onClick={onSend} disabled={loading||!input.trim()} style={{ width:46, height:46, borderRadius:"50%", flexShrink:0, background:input.trim()&&!loading?C.primary:C.border, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:16 }}>➤</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── LOGIN SCREEN ──────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [age, setAge] = useState("");
+  const [district, setDistrict] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const districts = ["काठमाडौं","ललितपुर","भक्तपुर","पोखरा","बुटवल","नेपालगञ्ज","धनगढी","विराटनगर","जनकपुर","हेटौंडा","दाङ","सुर्खेत","अन्य"];
+
+  async function handleLogin() {
+    if (!name.trim() || !phone.trim()) { setError("नाम र फोन नम्बर अनिवार्य छ।"); return; }
+    if (phone.length < 10) { setError("सही फोन नम्बर हाल्नुहोस्।"); return; }
+    setLoading(true); setError("");
+    const userId = "user_" + phone.replace(/\D/g,"");
+    try {
+      const { data: existing } = await supabase.from("health_profiles").select("*").eq("user_id", userId).single();
+      if (existing) {
+        localStorage.setItem("ss_user", JSON.stringify(existing));
+        onLogin(existing);
+      } else {
+        const profile = { user_id:userId, name:name.trim(), age, district };
+        const { data, error:err } = await supabase.from("health_profiles").insert([profile]).select().single();
+        if (err) throw err;
+        localStorage.setItem("ss_user", JSON.stringify(data));
+        onLogin(data);
+      }
+    } catch(e) {
+      setError("सम्पर्क गर्न सकिएन। पुनः प्रयास गर्नुहोस्।");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight:"100vh", background:`linear-gradient(160deg, ${C.primaryDark} 0%, ${C.primary} 50%, #2196A6 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ marginBottom:24, textAlign:"center" }}>
+        <div style={{ width:72, height:72, borderRadius:20, background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, margin:"0 auto 16px" }}>🏥</div>
+        <div style={{ fontSize:28, fontWeight:800, color:"#fff", marginBottom:6 }}>स्वास्थ्य सहायक</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)" }}>Nepal AI Health Assistant</div>
+      </div>
+
+      <div style={{ background:C.white, borderRadius:20, padding:24, width:"100%", maxWidth:400, boxShadow:"0 20px 40px rgba(0,0,0,0.2)" }}>
+        <div style={{ fontSize:18, fontWeight:800, color:C.text, marginBottom:4 }}>सुरु गर्नुहोस्</div>
+        <div style={{ fontSize:13, color:C.textLight, marginBottom:20 }}>तपाईंको जानकारी भर्नुहोस्</div>
+
+        {error && <div style={{ background:C.dangerLight, border:`1px solid #FEB2B2`, borderRadius:10, padding:"10px 14px", marginBottom:14, fontSize:13, color:C.danger }}>{error}</div>}
+
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.textMid, marginBottom:5 }}>पूरा नाम *</div>
+          <input value={name} onChange={e=>setName(e.target.value)}
+            placeholder="तपाईंको नाम"
+            style={{ width:"100%", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"11px 14px", fontSize:14, fontFamily:"inherit", color:C.text, outline:"none", boxSizing:"border-box" }}
+            onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}
+          />
+        </div>
+
+        <div style={{ marginBottom:12 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.textMid, marginBottom:5 }}>मोबाइल नम्बर *</div>
+          <input value={phone} onChange={e=>setPhone(e.target.value)} type="tel"
+            placeholder="98XXXXXXXX"
+            style={{ width:"100%", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"11px 14px", fontSize:14, fontFamily:"inherit", color:C.text, outline:"none", boxSizing:"border-box" }}
+            onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}
+          />
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
+          <div>
+            <div style={{ fontSize:12, fontWeight:600, color:C.textMid, marginBottom:5 }}>उमेर</div>
+            <input value={age} onChange={e=>setAge(e.target.value)} placeholder="वर्ष"
+              style={{ width:"100%", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"11px 14px", fontSize:14, fontFamily:"inherit", color:C.text, outline:"none", boxSizing:"border-box" }}
+              onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:600, color:C.textMid, marginBottom:5 }}>जिल्ला</div>
+            <select value={district} onChange={e=>setDistrict(e.target.value)}
+              style={{ width:"100%", border:`1.5px solid ${C.border}`, borderRadius:10, padding:"11px 14px", fontSize:13, fontFamily:"inherit", color:district?C.text:C.textLight, outline:"none", boxSizing:"border-box", background:C.white }}>
+              <option value="">छान्नुहोस्</option>
+              {districts.map(d=><option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <button onClick={handleLogin} disabled={loading} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:loading?"not-allowed":"pointer", fontFamily:"inherit", boxShadow:`0 4px 15px ${C.primary}44`, opacity:loading?0.7:1 }}>
+          {loading ? "लोड हुँदैछ..." : "सुरु गर्नुहोस् →"}
+        </button>
+
+        <div style={{ marginTop:12, fontSize:11, color:C.textLight, textAlign:"center", lineHeight:1.6 }}>
+          तपाईंको जानकारी सुरक्षित छ। कहिल्यै सार्वजनिक गरिँदैन।
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROFILE SCREEN ────────────────────────────────────────────
+function ProfileScreen({ user, onLogout }) {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadHistory() {
+      const { data } = await supabase
+        .from("health_chats")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .eq("role", "user")
+        .order("created_at", { ascending:false })
+        .limit(20);
+      setHistory(data || []);
+      setLoading(false);
+    }
+    loadHistory();
+  }, [user.user_id]);
+
+  function handleLogout() {
+    localStorage.removeItem("ss_user");
+    onLogout();
+  }
+
+  return (
+    <div style={{ padding:"20px 16px 100px" }}>
+      {/* Profile card */}
+      <div style={{ background:`linear-gradient(135deg, ${C.primaryDark}, ${C.primary})`, borderRadius:20, padding:"20px", marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+          <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26 }}>👤</div>
+          <div>
+            <div style={{ fontSize:18, fontWeight:800, color:"#fff" }}>{user.name}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:2 }}>{user.district || "नेपाल"} {user.age ? `· ${user.age} वर्ष` : ""}</div>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+          {[
+            { label:"कुराकानी", value:history.length },
+            { label:"जिल्ला", value:user.district||"—" },
+            { label:"उमेर", value:user.age||"—" },
+          ].map(({label,value})=>(
+            <div key={label} style={{ background:"rgba(255,255,255,0.15)", borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#fff" }}>{value}</div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", marginTop:2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat history */}
+      <SectionHeader title="पछिल्ला कुराकानीहरू" />
+      {loading ? (
+        <div style={{ textAlign:"center", padding:20, color:C.textLight, fontSize:13 }}>लोड हुँदैछ...</div>
+      ) : history.length === 0 ? (
+        <div style={{ background:C.white, borderRadius:14, padding:24, textAlign:"center", border:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>💬</div>
+          <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:4 }}>अझै कुराकानी छैन</div>
+          <div style={{ fontSize:12, color:C.textLight }}>AI सहायकसँग कुरा गर्नुहोस्</div>
+        </div>
+      ) : (
+        history.map((h,i) => (
+          <div key={i} style={{ background:C.white, borderRadius:12, padding:"12px 14px", marginBottom:8, border:`1px solid ${C.border}`, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize:13, color:C.text, marginBottom:4, lineHeight:1.5 }}>
+              {h.message.length > 80 ? h.message.slice(0,80)+"..." : h.message}
+            </div>
+            <div style={{ fontSize:10, color:C.textLight }}>
+              {new Date(h.created_at).toLocaleDateString("ne-NP", { year:"numeric", month:"short", day:"numeric" })}
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* Logout */}
+      <div style={{ marginTop:20, borderTop:`1px solid ${C.border}`, paddingTop:16 }}>
+        <button onClick={handleLogout} style={{ width:"100%", background:C.dangerLight, color:C.danger, border:`1px solid ${C.danger}33`, borderRadius:12, padding:"12px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          साइन आउट गर्नुहोस्
         </button>
       </div>
     </div>
   );
 }
 
-function HomeScreen({ setTab, pickSymptom }) {
+// ─── HOME SCREEN ───────────────────────────────────────────────
+function HomeScreen({ setTab, pickSymptom, user }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "शुभ प्रभात" : hour < 17 ? "नमस्ते" : "शुभ सन्ध्या";
   return (
     <div style={{ paddingBottom:90 }}>
-      <div style={{
-        background:`linear-gradient(135deg, ${C.primaryDark} 0%, ${C.primary} 60%, #2196A6 100%)`,
-        padding:"24px 20px 32px", position:"relative", overflow:"hidden"
-      }}>
+      <div style={{ background:`linear-gradient(135deg, ${C.primaryDark} 0%, ${C.primary} 60%, #2196A6 100%)`, padding:"24px 20px 32px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-40, right:-40, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }}/>
-        <div style={{ position:"absolute", bottom:-30, right:40, width:100, height:100, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }}/>
         <div style={{ position:"relative", zIndex:1 }}>
-          <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", marginBottom:4, fontWeight:500 }}>{greeting} 🙏</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", marginBottom:4, fontWeight:500 }}>{greeting}, {user?.name?.split(" ")[0] || "नमस्ते"} 🙏</div>
           <div style={{ fontSize:24, fontWeight:800, color:"#fff", lineHeight:1.2, marginBottom:6 }}>तपाईंलाई आज<br/>कस्तो छ?</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", marginBottom:20 }}>Roman मा टाइप गर्नुहोस् — हामी बुझ्छौँ</div>
-          <button onClick={() => setTab("check")} style={{
-            background:"rgba(255,255,255,0.15)", backdropFilter:"blur(10px)",
-            border:"1px solid rgba(255,255,255,0.3)", borderRadius:12,
-            padding:"12px 16px", display:"flex", alignItems:"center", gap:10,
-            width:"100%", cursor:"pointer", textAlign:"left"
-          }}>
+          <button onClick={() => setTab("check")} style={{ background:"rgba(255,255,255,0.15)", backdropFilter:"blur(10px)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:10, width:"100%", cursor:"pointer", textAlign:"left" }}>
             <span style={{ color:"rgba(255,255,255,0.7)", fontSize:16 }}>🔍</span>
-            <span style={{ color:"rgba(255,255,255,0.6)", fontSize:14, fontFamily:"inherit" }}>
-              tauko dukhxa, jworo... खोज्नुहोस्
-            </span>
+            <span style={{ color:"rgba(255,255,255,0.6)", fontSize:14, fontFamily:"inherit" }}>tauko dukhxa, jworo... खोज्नुहोस्</span>
           </button>
         </div>
       </div>
 
       <div style={{ padding:"0 16px" }}>
-        <div style={{
-          background:C.dangerLight, border:`1px solid #FEB2B2`,
-          borderRadius:12, padding:"10px 14px", margin:"14px 0",
-          display:"flex", alignItems:"center", justifyContent:"space-between"
-        }}>
+        <div style={{ background:C.dangerLight, border:`1px solid #FEB2B2`, borderRadius:12, padding:"10px 14px", margin:"14px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:32, height:32, borderRadius:8, background:C.danger, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>🚨</div>
-            <div>
-              <div style={{ fontSize:12, fontWeight:700, color:C.danger }}>आपतकालीन</div>
-              <div style={{ fontSize:11, color:"#C53030" }}>एम्बुलेन्स · प्रहरी</div>
-            </div>
+            <div><div style={{ fontSize:12, fontWeight:700, color:C.danger }}>आपतकालीन</div><div style={{ fontSize:11, color:"#C53030" }}>एम्बुलेन्स · प्रहरी</div></div>
           </div>
-          <a href="tel:102" style={{
-            background:C.danger, color:"#fff", borderRadius:8,
-            padding:"7px 16px", fontSize:15, fontWeight:800, textDecoration:"none"
-          }}>📞 102</a>
+          <a href="tel:102" style={{ background:C.danger, color:"#fff", borderRadius:8, padding:"7px 16px", fontSize:15, fontWeight:800, textDecoration:"none" }}>📞 102</a>
         </div>
 
         <SectionHeader title="के गर्नु छ?" />
-        <div onClick={() => setTab("chat")} style={{
-          background:`linear-gradient(135deg, ${C.secondary} 0%, #007A6E 100%)`,
-          borderRadius:16, padding:"18px 20px", marginBottom:10, cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          boxShadow:`0 4px 15px ${C.secondary}44`
-        }}>
+        <div onClick={() => setTab("chat")} style={{ background:`linear-gradient(135deg, ${C.secondary} 0%, #007A6E 100%)`, borderRadius:16, padding:"18px 20px", marginBottom:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:`0 4px 15px ${C.secondary}44` }}>
           <div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontWeight:600, letterSpacing:1, marginBottom:4 }}>AI HEALTH ASSISTANT</div>
             <div style={{ fontSize:18, fontWeight:800, color:"#fff", marginBottom:3 }}>AI सँग कुरा गर्नुहोस्</div>
@@ -405,10 +445,7 @@ function HomeScreen({ setTab, pickSymptom }) {
             { icon:"🩺", label:"लक्षण जाँच", sub:"के समस्या छ?", tab:"check", bg:C.primaryLight, color:C.primary },
             { icon:"👨‍⚕️", label:"डाक्टर भेट्नुहोस्", sub:"भिडियो परामर्श", tab:"doctors", bg:C.purpleLight, color:C.purple },
           ].map(item => (
-            <div key={item.tab} onClick={() => setTab(item.tab)} style={{
-              background:item.bg, borderRadius:14, padding:"16px 14px",
-              cursor:"pointer", border:`1px solid ${item.color}22`
-            }}>
+            <div key={item.tab} onClick={() => setTab(item.tab)} style={{ background:item.bg, borderRadius:14, padding:"16px 14px", cursor:"pointer", border:`1px solid ${item.color}22` }}>
               <div style={{ fontSize:28, marginBottom:8 }}>{item.icon}</div>
               <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:2 }}>{item.label}</div>
               <div style={{ fontSize:11, color:C.textLight }}>{item.sub}</div>
@@ -419,12 +456,7 @@ function HomeScreen({ setTab, pickSymptom }) {
         <SectionHeader title="सामान्य समस्याहरू" action="सबै हेर्नुहोस्" onAction={() => setTab("check")} />
         <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:20 }}>
           {SYMPTOMS.map(s => (
-            <button key={s.id} onClick={() => { pickSymptom(s); setTab("check"); }} style={{
-              background:C.white, border:`1px solid ${C.border}`, borderRadius:12,
-              padding:"10px 12px", flexShrink:0, cursor:"pointer", fontFamily:"inherit",
-              display:"flex", flexDirection:"column", alignItems:"center", gap:4,
-              minWidth:76, boxShadow:"0 1px 3px rgba(0,0,0,0.06)"
-            }}>
+            <button key={s.id} onClick={() => { pickSymptom(s); setTab("check"); }} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:"10px 12px", flexShrink:0, cursor:"pointer", fontFamily:"inherit", display:"flex", flexDirection:"column", alignItems:"center", gap:4, minWidth:76, boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
               <span style={{ fontSize:22 }}>{s.icon}</span>
               <span style={{ fontSize:10, color:C.textMid, fontWeight:500, textAlign:"center", lineHeight:1.3 }}>{s.en}</span>
             </button>
@@ -433,20 +465,12 @@ function HomeScreen({ setTab, pickSymptom }) {
 
         <SectionHeader title="उपलब्ध डाक्टरहरू" action="सबै हेर्नुहोस्" onAction={() => setTab("doctors")} />
         {DOCTORS.filter(d=>d.avail).slice(0,2).map((d,i) => (
-          <div key={i} onClick={() => setTab("doctors")} style={{
-            background:C.white, border:`1px solid ${C.border}`,
-            borderRadius:14, padding:"14px", marginBottom:10, cursor:"pointer",
-            display:"flex", alignItems:"center", gap:12,
-            boxShadow:"0 1px 4px rgba(0,0,0,0.06)"
-          }}>
+          <div key={i} onClick={() => setTab("doctors")} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px", marginBottom:10, cursor:"pointer", display:"flex", alignItems:"center", gap:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
             <Avatar initials={d.initials} color={d.color} size={48} />
             <div style={{ flex:1 }}>
               <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:2 }}>{d.name}</div>
               <div style={{ fontSize:11, color:C.textLight, marginBottom:4 }}>{d.spec}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <StarRating rating={d.rating} />
-                <span style={{ fontSize:11, color:C.textLight }}>({d.reviews})</span>
-              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}><StarRating rating={d.rating} /><span style={{ fontSize:11, color:C.textLight }}>({d.reviews})</span></div>
             </div>
             <div style={{ textAlign:"right" }}>
               <div style={{ background:C.successLight, color:C.success, borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, marginBottom:4 }}>{d.wait}</div>
@@ -459,72 +483,48 @@ function HomeScreen({ setTab, pickSymptom }) {
   );
 }
 
+// ─── CHECK SCREEN ──────────────────────────────────────────────
 function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(initialSymptom ? [initialSymptom] : []);
   const [result, setResult] = useState(initialSymptom ? [initialSymptom] : null);
   const [preview, setPreview] = useState("");
 
-  useEffect(() => {
-    if (initialSymptom) { setSelected([initialSymptom]); setResult([initialSymptom]); }
-  }, [initialSymptom]);
+  useEffect(() => { if (initialSymptom) { setSelected([initialSymptom]); setResult([initialSymptom]); } }, [initialSymptom]);
 
   function handleQuery(val) { setQuery(val); setResult(null); setPreview(romanToNepali(val)||""); }
 
   function search() {
     const lower = query.toLowerCase();
-    const found = SYMPTOMS.filter(s =>
-      selected.includes(s) ||
-      s.roman.some(r => lower.includes(r.split(" ")[0])) ||
-      lower.includes(s.nepali.slice(0,2)) ||
-      lower.includes(s.en.toLowerCase())
-    );
+    const found = SYMPTOMS.filter(s => selected.includes(s) || s.roman.some(r=>lower.includes(r.split(" ")[0])) || lower.includes(s.nepali.slice(0,2)) || lower.includes(s.en.toLowerCase()));
     setResult(found.length ? found : []);
   }
 
-  const worstSev = result?.reduce((w,s) => { const o={low:0,medium:1,high:2}; return o[s.severity]>o[w]?s.severity:w; },"low");
+  const worstSev = result?.reduce((w,s)=>{ const o={low:0,medium:1,high:2}; return o[s.severity]>o[w]?s.severity:w; },"low");
 
   return (
     <div style={{ padding:"20px 16px 100px" }}>
       <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>लक्षण जाँच</div>
       <div style={{ fontSize:13, color:C.textLight, marginBottom:20 }}>Roman वा नेपाली — दुवै बुझ्छ</div>
-
       <div style={{ background:C.white, borderRadius:14, padding:16, border:`1px solid ${C.border}`, marginBottom:16, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
         <div style={{ display:"flex", alignItems:"flex-start", gap:10, border:`1.5px solid ${C.border}`, borderRadius:10, padding:"10px 12px", background:C.bg, marginBottom:10 }}>
           <span style={{ color:C.textLight, marginTop:3, fontSize:16 }}>🔍</span>
-          <textarea value={query} onChange={e=>handleQuery(e.target.value)}
-            placeholder={"tauko dukhxa...\nटाउको दुख्छ...\nheadache and fever..."} rows={2}
-            style={{ flex:1, border:"none", background:"none", outline:"none", fontSize:14, fontFamily:"inherit", color:C.text, resize:"none", lineHeight:1.6 }}
-          />
+          <textarea value={query} onChange={e=>handleQuery(e.target.value)} placeholder={"tauko dukhxa...\nटाउको दुख्छ..."} rows={2}
+            style={{ flex:1, border:"none", background:"none", outline:"none", fontSize:14, fontFamily:"inherit", color:C.text, resize:"none", lineHeight:1.6 }} />
         </div>
         {preview && <div style={{ padding:"7px 12px", background:C.primaryLight, borderRadius:8, fontSize:13, color:C.primary, fontWeight:600, marginBottom:10 }}>✓ बुझियो: {preview}</div>}
         <button onClick={search} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>जाँच गर्नुहोस्</button>
       </div>
-
       <div style={{ marginBottom:20 }}>
         <div style={{ fontSize:12, fontWeight:600, color:C.textLight, textTransform:"uppercase", letterSpacing:0.5, marginBottom:10 }}>वा छान्नुहोस्</div>
         <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
           {SYMPTOMS.map(s => {
             const on = selected.includes(s);
-            return (
-              <button key={s.id} onClick={() => { setSelected(p=>on?p.filter(x=>x!==s):[...p,s]); setResult(null); }} style={{
-                background:on?C.primary:C.white, color:on?"#fff":C.textMid,
-                border:`1.5px solid ${on?C.primary:C.border}`, borderRadius:24,
-                padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer",
-                fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
-                boxShadow:on?`0 2px 8px ${C.primary}44`:"0 1px 3px rgba(0,0,0,0.05)"
-              }}>{s.icon} {s.nepali}</button>
-            );
+            return <button key={s.id} onClick={() => { setSelected(p=>on?p.filter(x=>x!==s):[...p,s]); setResult(null); }} style={{ background:on?C.primary:C.white, color:on?"#fff":C.textMid, border:`1.5px solid ${on?C.primary:C.border}`, borderRadius:24, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6 }}>{s.icon} {s.nepali}</button>;
           })}
         </div>
       </div>
-
-      {selected.length > 0 && !result && (
-        <button onClick={() => setResult(selected)} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:12, padding:"13px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:16 }}>
-          {selected.length} वटा लक्षण जाँच गर्नुहोस्
-        </button>
-      )}
-
+      {selected.length > 0 && !result && <button onClick={() => setResult(selected)} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:12, padding:"13px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:16 }}>{selected.length} वटा लक्षण जाँच गर्नुहोस्</button>}
       {result !== null && (
         <div>
           {result.length === 0 ? (
@@ -550,9 +550,7 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
                   </div>
                   <div style={{ marginBottom:10 }}>
                     <div style={{ fontSize:11, fontWeight:600, color:C.textLight, textTransform:"uppercase", letterSpacing:0.5, marginBottom:6 }}>सम्भावित कारण</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {s.causes.map((c,j) => <span key={j} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, padding:"3px 10px", fontSize:11, color:C.textMid }}>{c}</span>)}
-                    </div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{s.causes.map((c,j)=><span key={j} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, padding:"3px 10px", fontSize:11, color:C.textMid }}>{c}</span>)}</div>
                   </div>
                   <div style={{ background:C.primaryLight, borderLeft:`3px solid ${C.primary}`, borderRadius:"0 10px 10px 0", padding:"10px 14px", fontSize:13, color:C.primaryDark, lineHeight:1.7, marginBottom:8 }}>{s.advice}</div>
                   {s.severity !== "low" && <div style={{ background:s.severity==="high"?C.dangerLight:C.warningLight, borderRadius:10, padding:"10px 14px", fontSize:13, color:s.severity==="high"?C.danger:C.warning, fontWeight:500 }}>⚠️ {s.warning}</div>}
@@ -569,8 +567,9 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
   );
 }
 
-function ChatScreen({ seed, setSeed, online }) {
-  const [msgs, setMsgs] = useState([{ role:"assistant", text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nRoman मा टाइप गर्नुहोस् वा 🎤 थिचेर बोल्नुहोस् — म बुझ्छु।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको सट्टा होइन।" }]);
+// ─── CHAT SCREEN ───────────────────────────────────────────────
+function ChatScreen({ seed, setSeed, online, user }) {
+  const [msgs, setMsgs] = useState([{ role:"assistant", text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nRoman मा टाइप गर्नुहोस् वा 🎤 थिचेर बोल्नुहोस्।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको सट्टा होइन।" }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -582,16 +581,22 @@ function ChatScreen({ seed, setSeed, online }) {
 
   function handleInput(val) { setInput(val); setPreview(isRoman(val)?(romanToNepali(val)||""):""); }
 
+  async function saveChat(message, role) {
+    if (!user?.user_id) return;
+    await supabase.from("health_chats").insert([{ user_id:user.user_id, message, role }]);
+  }
+
   async function send() {
     const text = input.trim();
     if (!text || loading) return;
     setInput(""); setPreview("");
     setMsgs(p => [...p, { role:"user", text }]);
+    await saveChat(text, "user");
     setLoading(true);
     if (!online) {
       setTimeout(() => {
         const match = SYMPTOMS.find(s => s.roman.some(r => text.toLowerCase().includes(r.split(" ")[0])));
-        const reply = match ? `🩺 के भइरहेको छ: ${match.nepali} जस्तो देखिन्छ।\n✅ के गर्ने: ${match.advice}\n⚠️ कहिले डाक्टर: ${match.warning}` : "अफलाइन मोडमा सीमित जवाफ मात्र। नजिकको स्वास्थ्य चौकीमा जानुहोस्।";
+        const reply = match ? `🩺 के भइरहेको छ: ${match.nepali}\n✅ के गर्ने: ${match.advice}\n⚠️ कहिले डाक्टर: ${match.warning}` : "अफलाइन मोडमा सीमित जवाफ मात्र।";
         setMsgs(p => [...p, { role:"assistant", text:reply }]);
         setLoading(false);
       }, 600);
@@ -601,14 +606,15 @@ function ChatScreen({ seed, setSeed, online }) {
       const reply = await askAI(text, history);
       setHistory(h => [...h, {role:"user",content:text}, {role:"assistant",content:reply}].slice(-12));
       setMsgs(p => [...p, { role:"assistant", text:reply }]);
-    } catch { setMsgs(p => [...p, { role:"assistant", text:"माफ गर्नुहोस्, जडान भएन। पुनः प्रयास गर्नुहोस्।" }]); }
+      await saveChat(reply, "assistant");
+    } catch { setMsgs(p => [...p, { role:"assistant", text:"माफ गर्नुहोस्, जडान भएन।" }]); }
     setLoading(false);
   }
 
   function renderMsg(text) {
     return text.split("\n").map((line, i) => {
       if (!line.trim()) return <div key={i} style={{ height:4 }}/>;
-      const isHeader = /^[🩺✅⚠️📶]/.test(line);
+      const isHeader = /^[🩺✅⚠️]/.test(line);
       return <div key={i} style={{ fontSize:13, lineHeight:1.75, color:isHeader?C.primaryDark:C.text, fontWeight:isHeader?600:400, marginTop:isHeader?6:0 }}>{line}</div>;
     });
   }
@@ -634,13 +640,11 @@ function ChatScreen({ seed, setSeed, online }) {
         )}
         <div ref={bottom}/>
       </div>
-
       <div style={{ padding:"6px 12px 8px", display:"flex", gap:6, overflowX:"auto" }}>
         {["के गर्नु पर्छ?","कुन दवाई?","डाक्टर जानुपर्छ?","घरमा उपाय?"].map((q,i)=>(
           <button key={i} onClick={()=>setInput(q)} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:20, padding:"6px 14px", whiteSpace:"nowrap", color:C.textMid, fontSize:11, fontFamily:"inherit", cursor:"pointer", flexShrink:0 }}>{q}</button>
         ))}
       </div>
-
       <div style={{ padding:"8px 12px 16px", borderTop:`1px solid ${C.border}`, background:C.white }}>
         {preview && <div style={{ marginBottom:6, padding:"5px 12px", background:C.primaryLight, borderRadius:8, fontSize:12, color:C.primary, fontWeight:600 }}>✓ {preview}</div>}
         <VoiceInput input={input} setInput={handleInput} onSend={send} loading={loading} />
@@ -649,6 +653,7 @@ function ChatScreen({ seed, setSeed, online }) {
   );
 }
 
+// ─── DOCTORS SCREEN ────────────────────────────────────────────
 function DoctorsScreen() {
   const [booked, setBooked] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -676,10 +681,7 @@ function DoctorsScreen() {
             <div style={{ flex:1 }}>
               <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:2 }}>{d.name}</div>
               <div style={{ fontSize:12, color:C.textLight, marginBottom:6 }}>{d.spec} · {d.exp} अनुभव</div>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <StarRating rating={d.rating} />
-                <span style={{ fontSize:11, color:C.textLight }}>({d.reviews} समीक्षा)</span>
-              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}><StarRating rating={d.rating} /><span style={{ fontSize:11, color:C.textLight }}>({d.reviews})</span></div>
             </div>
             <div style={{ textAlign:"right" }}>
               <div style={{ background:d.avail?C.successLight:C.bg, color:d.avail?C.success:C.textLight, borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, marginBottom:6 }}>{d.avail?"उपलब्ध":"व्यस्त"}</div>
@@ -700,56 +702,36 @@ function DoctorsScreen() {
   );
 }
 
-function TipsScreen() {
-  const [saved, setSaved] = useState([]);
-  const tips = [
-    { icon:"💧", color:C.primary, bg:C.primaryLight, title:"पानी पिउनुहोस्", body:"दिनमा कम्तीमा ८ गिलास सफा पानी पिउनुहोस्।", tag:"दैनिक" },
-    { icon:"🥗", color:C.secondary, bg:C.secondaryLight, title:"सन्तुलित खाना", body:"दाल, भात, तरकारी र फलफूल नियमित खानुहोस्।", tag:"पोषण" },
-    { icon:"😴", color:C.purple, bg:C.purpleLight, title:"पर्याप्त निद्रा", body:"प्रतिदिन ७–८ घण्टा सुत्नुहोस्।", tag:"आराम" },
-    { icon:"🚶", color:C.accent, bg:C.accentLight, title:"हिँड्नुहोस्", body:"दिनमा कम्तीमा ३० मिनेट हिँड्नुहोस्।", tag:"व्यायाम" },
-    { icon:"🤲", color:C.secondary, bg:C.secondaryLight, title:"हात धुनुहोस्", body:"खाना अघि र शौचालय पछि साबुनले हात धुनुहोस्।", tag:"सरसफाई" },
-    { icon:"💉", color:C.primary, bg:C.primaryLight, title:"खोप लगाउनुहोस्", body:"नियमित खोप लगाएर रोगबाट बच्नुहोस्।", tag:"रोकथाम" },
-  ];
-  return (
-    <div style={{ padding:"20px 16px 100px" }}>
-      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>स्वास्थ्य सुझाव</div>
-      <div style={{ fontSize:13, color:C.textLight, marginBottom:20 }}>राम्रो बानीहरू — अफलाइनमा पनि उपलब्ध</div>
-      {tips.map((t,i) => (
-        <div key={i} style={{ background:C.white, borderRadius:14, padding:14, marginBottom:10, border:`1px solid ${C.border}`, display:"flex", gap:12, alignItems:"flex-start", boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ width:46, height:46, borderRadius:12, background:t.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{t.icon}</div>
-          <div style={{ flex:1 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
-              <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{t.title}</span>
-              <span style={{ background:t.bg, color:t.color, borderRadius:4, padding:"1px 7px", fontSize:10, fontWeight:600 }}>{t.tag}</span>
-            </div>
-            <div style={{ fontSize:13, color:C.textMid, lineHeight:1.6 }}>{t.body}</div>
-          </div>
-          <button onClick={()=>setSaved(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{ background:"none", border:"none", cursor:"pointer", fontSize:18, color:saved.includes(i)?C.warning:C.textLight, flexShrink:0 }}>{saved.includes(i)?"★":"☆"}</button>
-        </div>
-      ))}
-      <div style={{ background:C.dangerLight, border:`1px solid #FEB2B2`, borderRadius:16, padding:16, marginTop:4 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.danger, marginBottom:12 }}>🚨 आपतकालीन नम्बरहरू</div>
-        {[["एम्बुलेन्स","102"],["प्रहरी","100"],["अग्नि","101"],["हेल्पलाइन","1800-01-1190"]].map(([l,n])=>(
-          <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid #FED7D7` }}>
-            <span style={{ fontSize:13, color:"#C53030" }}>{l}</span>
-            <a href={`tel:${n}`} style={{ fontSize:18, fontWeight:800, color:C.danger, textDecoration:"none" }}>{n}</a>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+// ─── ROOT APP ──────────────────────────────────────────────────
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("home");
   const [online, setOnline] = useState(navigator.onLine);
   const [pickedSymptom, setPickedSymptom] = useState(null);
   const [chatSeed, setChatSeed] = useState(null);
 
   useEffect(() => {
-    window.addEventListener("online",  () => setOnline(true));
+    const saved = localStorage.getItem("ss_user");
+    if (saved) { try { setUser(JSON.parse(saved)); } catch(e) {} }
+    setAuthLoading(false);
+    window.addEventListener("online", () => setOnline(true));
     window.addEventListener("offline", () => setOnline(false));
   }, []);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight:"100vh", background:`linear-gradient(135deg, ${C.primaryDark}, ${C.primary})`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:12 }}>🏥</div>
+          <div style={{ fontSize:16, color:"#fff", fontWeight:700 }}>स्वास्थ्य सहायक</div>
+          <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)", marginTop:6 }}>लोड हुँदैछ...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginScreen onLogin={setUser} />;
 
   return (
     <div style={{ background:C.bg, minHeight:"100vh", maxWidth:480, margin:"0 auto", position:"relative", fontFamily:"'Noto Sans Devanagari', 'Segoe UI', system-ui, sans-serif", color:C.text }}>
@@ -762,6 +744,7 @@ export default function App() {
         input::placeholder,textarea::placeholder { color:${C.textLight}; }
         button { outline:none; -webkit-tap-highlight-color:transparent; }
         a { -webkit-tap-highlight-color:transparent; }
+        select { appearance:none; }
       `}</style>
 
       <div style={{ background:C.white, padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}`, position:"sticky", top:0, zIndex:50, boxShadow:"0 1px 8px rgba(0,0,0,0.06)" }}>
@@ -772,20 +755,22 @@ export default function App() {
             <div style={{ fontSize:9, color:C.textLight, letterSpacing:0.3, marginTop:1 }}>Nepal AI Health Assistant</div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:5, background:online?C.successLight:C.warningLight, padding:"4px 10px", borderRadius:20 }}>
-          <div style={{ width:6, height:6, borderRadius:"50%", background:online?C.success:C.warning }}/>
-          <span style={{ fontSize:10, fontWeight:700, color:online?C.success:C.warning }}>{online?"Online":"Offline"}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:5, background:online?C.successLight:C.warningLight, padding:"4px 10px", borderRadius:20 }}>
+            <div style={{ width:6, height:6, borderRadius:"50%", background:online?C.success:C.warning }}/>
+            <span style={{ fontSize:10, fontWeight:700, color:online?C.success:C.warning }}>{online?"Online":"Offline"}</span>
+          </div>
         </div>
       </div>
 
       {!online && <div style={{ background:C.warningLight, padding:"7px 16px", fontSize:12, color:C.warning, fontWeight:500, borderBottom:`1px solid #FBD38D` }}>⚠️ इन्टरनेट छैन — मूल सुविधाहरू उपलब्ध छन्</div>}
 
       <div style={{ height:`calc(100vh - ${online?55:80}px - 54px)`, overflowY:"auto" }}>
-        {tab==="home"    && <HomeScreen setTab={setTab} pickSymptom={setPickedSymptom} />}
+        {tab==="home"    && <HomeScreen setTab={setTab} pickSymptom={setPickedSymptom} user={user} />}
         {tab==="check"   && <CheckScreen initialSymptom={pickedSymptom} setTab={setTab} setChatSeed={setChatSeed} />}
-        {tab==="chat"    && <ChatScreen seed={chatSeed} setSeed={setChatSeed} online={online} />}
+        {tab==="chat"    && <ChatScreen seed={chatSeed} setSeed={setChatSeed} online={online} user={user} />}
         {tab==="doctors" && <DoctorsScreen />}
-        {tab==="tips"    && <TipsScreen />}
+        {tab==="profile" && <ProfileScreen user={user} onLogout={() => setUser(null)} />}
       </div>
       <BottomNav tab={tab} setTab={setTab} />
     </div>
