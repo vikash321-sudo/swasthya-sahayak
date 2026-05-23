@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+
 const C = {
   bg:"#F0F4F8", white:"#FFFFFF",
   primary:"#1A6DB5", primaryLight:"#E8F2FF", primaryDark:"#0F4C8A",
@@ -212,6 +213,130 @@ function BottomNav({ tab, setTab }) {
   );
 }
 
+// ─── VOICE INPUT COMPONENT ─────────────────────────────────────
+function VoiceInput({ input, setInput, onSend, loading }) {
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const recognitionRef = useRef(null);
+
+  function startVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError("Voice support छैन। Chrome प्रयोग गर्नुहोस्।");
+      setTimeout(() => setVoiceError(""), 3000);
+      return;
+    }
+    setVoiceError("");
+    const recognition = new SpeechRecognition();
+    // Try Nepali first, fallback to English
+    recognition.lang = "ne-NP";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = (e) => {
+      setListening(false);
+      if (e.error === "language-not-supported") {
+        // Retry with English if Nepali not supported
+        const r2 = new SpeechRecognition();
+        r2.lang = "en-US";
+        r2.interimResults = false;
+        r2.onstart = () => setListening(true);
+        r2.onend = () => setListening(false);
+        r2.onerror = () => setListening(false);
+        r2.onresult = (e2) => {
+          const transcript = e2.results[0][0].transcript;
+          setInput(transcript);
+        };
+        recognitionRef.current = r2;
+        r2.start();
+      } else {
+        setVoiceError("माइक्रोफोन अनुमति दिनुहोस्।");
+        setTimeout(() => setVoiceError(""), 3000);
+      }
+    };
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setInput(transcript);
+    };
+    recognition.start();
+  }
+
+  function stopVoice() {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }
+
+  return (
+    <div>
+      {voiceError && (
+        <div style={{
+          marginBottom:6, padding:"5px 12px", background:C.dangerLight,
+          borderRadius:8, fontSize:12, color:C.danger, fontWeight:500
+        }}>⚠️ {voiceError}</div>
+      )}
+      {listening && (
+        <div style={{
+          marginBottom:6, padding:"8px 14px", background:C.primaryLight,
+          borderRadius:10, fontSize:12, color:C.primary, fontWeight:600,
+          display:"flex", alignItems:"center", gap:8
+        }}>
+          <span style={{ animation:"voicePulse 0.8s infinite", display:"inline-block", fontSize:16 }}>🎤</span>
+          सुनिरहेको छु... बोल्नुहोस्
+        </div>
+      )}
+      <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key==="Enter" && onSend()}
+          placeholder={listening ? "सुनिरहेको छु..." : "tauko dukhxa... वा बोल्नुहोस् 🎤"}
+          style={{
+            flex:1, border:`1.5px solid ${listening ? C.primary : C.border}`,
+            borderRadius:24, padding:"11px 16px", fontSize:13,
+            fontFamily:"inherit", color:C.text, outline:"none", background:C.bg,
+            transition:"border-color 0.2s"
+          }}
+          onFocus={e => e.target.style.borderColor=C.primary}
+          onBlur={e => { if (!listening) e.target.style.borderColor=C.border; }}
+        />
+        {/* Mic button */}
+        <button
+          onClick={listening ? stopVoice : startVoice}
+          title={listening ? "रोक्नुहोस्" : "बोल्नुहोस्"}
+          style={{
+            width:46, height:46, borderRadius:"50%", flexShrink:0,
+            background: listening ? C.dangerLight : C.primaryLight,
+            border: `2px solid ${listening ? C.danger : C.primary}`,
+            cursor:"pointer", fontSize:20,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            transition:"all 0.2s",
+            animation: listening ? "voicePulse 1s infinite" : "none",
+            boxShadow: listening ? `0 0 0 4px ${C.danger}22` : "none"
+          }}>
+          {listening ? "⏹" : "🎤"}
+        </button>
+        {/* Send button */}
+        <button
+          onClick={onSend}
+          disabled={loading || !input.trim()}
+          style={{
+            width:46, height:46, borderRadius:"50%", flexShrink:0,
+            background: input.trim() && !loading ? C.primary : C.border,
+            border:"none", cursor: input.trim() && !loading ? "pointer" : "not-allowed",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            color:"#fff", fontSize:16, transition:"background 0.2s",
+            boxShadow: input.trim() && !loading ? `0 4px 12px ${C.primary}44` : "none"
+          }}>
+          ➤
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function HomeScreen({ setTab, pickSymptom }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "शुभ प्रभात" : hour < 17 ? "नमस्ते" : "शुभ सन्ध्या";
@@ -270,7 +395,7 @@ function HomeScreen({ setTab, pickSymptom }) {
           <div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontWeight:600, letterSpacing:1, marginBottom:4 }}>AI HEALTH ASSISTANT</div>
             <div style={{ fontSize:18, fontWeight:800, color:"#fff", marginBottom:3 }}>AI सँग कुरा गर्नुहोस्</div>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)" }}>Nepali · Roman · English</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)" }}>Nepali · Roman · Voice 🎤</div>
           </div>
           <div style={{ width:52, height:52, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26 }}>💬</div>
         </div>
@@ -301,9 +426,7 @@ function HomeScreen({ setTab, pickSymptom }) {
               minWidth:76, boxShadow:"0 1px 3px rgba(0,0,0,0.06)"
             }}>
               <span style={{ fontSize:22 }}>{s.icon}</span>
-              <span style={{ fontSize:10, color:C.textMid, fontWeight:500, textAlign:"center", lineHeight:1.3 }}>
-                {s.en}
-              </span>
+              <span style={{ fontSize:10, color:C.textMid, fontWeight:500, textAlign:"center", lineHeight:1.3 }}>{s.en}</span>
             </button>
           ))}
         </div>
@@ -447,7 +570,7 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
 }
 
 function ChatScreen({ seed, setSeed, online }) {
-  const [msgs, setMsgs] = useState([{ role:"assistant", text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nRoman मा पनि लेख्नुहोस् — \"tauko dukhxa\", \"jworo\" — म बुझ्छु।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको होइन।" }]);
+  const [msgs, setMsgs] = useState([{ role:"assistant", text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nRoman मा टाइप गर्नुहोस् वा 🎤 थिचेर बोल्नुहोस् — म बुझ्छु।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको सट्टा होइन।" }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -511,21 +634,16 @@ function ChatScreen({ seed, setSeed, online }) {
         )}
         <div ref={bottom}/>
       </div>
+
       <div style={{ padding:"6px 12px 8px", display:"flex", gap:6, overflowX:"auto" }}>
         {["के गर्नु पर्छ?","कुन दवाई?","डाक्टर जानुपर्छ?","घरमा उपाय?"].map((q,i)=>(
           <button key={i} onClick={()=>setInput(q)} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:20, padding:"6px 14px", whiteSpace:"nowrap", color:C.textMid, fontSize:11, fontFamily:"inherit", cursor:"pointer", flexShrink:0 }}>{q}</button>
         ))}
       </div>
+
       <div style={{ padding:"8px 12px 16px", borderTop:`1px solid ${C.border}`, background:C.white }}>
         {preview && <div style={{ marginBottom:6, padding:"5px 12px", background:C.primaryLight, borderRadius:8, fontSize:12, color:C.primary, fontWeight:600 }}>✓ {preview}</div>}
-        <div style={{ display:"flex", gap:8 }}>
-          <input value={input} onChange={e=>handleInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
-            placeholder="tauko dukhxa... वा नेपाली मा..."
-            style={{ flex:1, border:`1.5px solid ${C.border}`, borderRadius:24, padding:"11px 16px", fontSize:13, fontFamily:"inherit", color:C.text, outline:"none", background:C.bg }}
-            onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}
-          />
-          <button onClick={send} disabled={loading||!input.trim()} style={{ width:46, height:46, borderRadius:"50%", flexShrink:0, background:input.trim()&&!loading?C.primary:C.border, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:16, transition:"background 0.2s" }}>➤</button>
-        </div>
+        <VoiceInput input={input} setInput={handleInput} onSend={send} loading={loading} />
       </div>
     </div>
   );
@@ -638,6 +756,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
         @keyframes typingDot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+        @keyframes voicePulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.15);opacity:0.8} }
         * { box-sizing:border-box; margin:0; padding:0; }
         ::-webkit-scrollbar { width:0; height:0; }
         input::placeholder,textarea::placeholder { color:${C.textLight}; }
