@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "स्वास्थ्य सहायक",
+  "name": "स्वास्थ्य सहायक - Nepal AI Health",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,8 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1A6DB5",
+  "background_color": "#F0F4F8",
+  "orientation": "portrait",
+  "description": "नेपालको लागि AI स्वास्थ्य सहायक — निःशुल्क"
 }
