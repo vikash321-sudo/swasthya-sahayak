@@ -159,8 +159,8 @@ async function askAI(text,history,lang){
 }
 
 // ─── Follow-up AI ───────────────────────────────────────────────
-const FOLLOWUP_QUESTIONS_EN=["How are you feeling compared to yesterday?","Have you taken your medicine today?","What is your temperature right now?","Are you able to eat and drink?","Any new symptoms since we last spoke?"];
-const FOLLOWUP_QUESTIONS_NE=["हिजोको तुलनामा आज कस्तो महसुस गर्दैहुनुहुन्छ?","आज औषधि खानुभयो?","अहिले तापक्रम कति छ?","खानापिना गर्न सक्नुभएको छ?","पछिल्लो पटकपछि नयाँ लक्षण देखियो?"];
+//const FOLLOWUP_QUESTIONS_EN=["How are you feeling compared to yesterday?","Have you taken your medicine today?","What is your temperature right now?","Are you able to eat and drink?","Any new symptoms since we last spoke?"];
+//const FOLLOWUP_QUESTIONS_NE=["हिजोको तुलनामा आज कस्तो महसुस गर्दैहुनुहुन्छ?","आज औषधि खानुभयो?","अहिले तापक्रम कति छ?","खानापिना गर्न सक्नुभएको छ?","पछिल्लो पटकपछि नयाँ लक्षण देखियो?"];
 
 // ─── Small Components ──────────────────────────────────────────
 function Av({init,color,size=44}){return <div style={{width:size,height:size,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:size*0.35,fontWeight:700,flexShrink:0}}>{init}</div>;}
@@ -684,7 +684,7 @@ function DoctorsScreen({lang}){
 
 // ─── FOLLOW-UP ─────────────────────────────────────────────────
 function FollowUpScreen({user,lang,setTab}){
-  const [followups,setFollowups]=useState([
+  const [followups]=useState([
     {id:1,symptom:lang==="en"?"Fever Follow-up":"ज्वरो फलो-अप",date:"2026-05-24",time:"10:00 AM",status:"upcoming",color:C.orange,icon:"🌡️"},
     {id:2,symptom:lang==="en"?"Headache Follow-up":"टाउको दुखाई फलो-अप",date:"2026-05-22",time:"09:00 AM",status:"done",color:C.primary,icon:"🤕"},
   ]);
