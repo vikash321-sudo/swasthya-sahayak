@@ -1,60 +1,33 @@
-import { useState, useEffect, useRef } from "react";
-
-// ─── Design Direction ───────────────────────────────────────────
-// Light, warm white background. Soft teal + purple accents.
-// Rounded cards, large touch targets, friendly icons.
-// Feels like a trusted government/health service app.
-// Noto Sans Devanagari for perfect Nepali rendering.
-// Simple enough for someone who has never used an app before.
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const C = {
-  bg:         "#F7F9FC",
-  white:      "#FFFFFF",
-  teal:       "#0891B2",
-  tealLight:  "#E0F2FE",
-  tealDark:   "#0369A1",
-  purple:     "#7C3AED",
-  purpleLight:"#EDE9FE",
-  purpleDark: "#5B21B6",
-  green:      "#059669",
-  greenLight: "#D1FAE5",
-  red:        "#DC2626",
-  redLight:   "#FEE2E2",
-  orange:     "#D97706",
-  orangeLight:"#FEF3C7",
-  text:       "#1E293B",
-  textMid:    "#475569",
-  textLight:  "#94A3B8",
-  border:     "#E2E8F0",
-  shadow:     "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
-  shadowMd:   "0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05)",
-  shadowLg:   "0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04)",
+  bg:"#F0F4F8", white:"#FFFFFF",
+  primary:"#1A6DB5", primaryLight:"#E8F2FF", primaryDark:"#0F4C8A",
+  secondary:"#00A896", secondaryLight:"#E0F5F3",
+  accent:"#F4845F", accentLight:"#FEF0EB",
+  purple:"#6C63FF", purpleLight:"#EEECFF",
+  success:"#1DB954", successLight:"#E6F9ED",
+  warning:"#F5A623", warningLight:"#FFF8ED",
+  danger:"#E53E3E", dangerLight:"#FFF5F5",
+  text:"#1A202C", textMid:"#4A5568", textLight:"#A0AEC0",
+  border:"#E2E8F0", borderDark:"#CBD5E0",
 };
 
-// ─── Transliteration Engine ────────────────────────────────────
 const WORD_MAP = {
   "tauko":"टाउको","dukhxa":"दुख्छ","dukhcha":"दुख्छ","dukcha":"दुख्छ",
   "jworo":"ज्वरो","jwaro":"ज्वरो","joro":"ज्वरो","fever":"ज्वरो",
-  "pet":"पेट","peta":"पेटमा","stomach":"पेट",
-  "khansi":"खाँसी","khaasi":"खाँसी","cough":"खाँसी",
-  "ulti":"उल्टी","vomiting":"उल्टी","banti":"बान्ता",
-  "chhati":"छाती","chati":"छाती","chest":"छाती",
-  "chakkar":"चक्कर","dizzy":"चक्कर","dizziness":"चक्कर",
-  "sas":"सास","breathing":"सास","shwas":"श्वास",
+  "pet":"पेट","stomach":"पेट","khansi":"खाँसी","khaasi":"खाँसी","cough":"खाँसी",
+  "ulti":"उल्टी","vomiting":"उल्टी","chhati":"छाती","chest":"छाती",
+  "chakkar":"चक्कर","dizzy":"चक्कर","sas":"सास","breathing":"सास",
   "ferna":"फेर्न","garho":"गाह्रो","garo":"गाह्रो",
-  "aankha":"आँखा","aankhaa":"आँखा","eye":"आँखा",
-  "headache":"टाउको दुख्छ","pain":"दुखाई",
-  "thikai":"ठिकै","ramro":"राम्रो","naramro":"नराम्रो",
-  "khana":"खाना","paani":"पानी","pani":"पानी",
-  "doctor":"डाक्टर","hospital":"अस्पताल",
-  "ma":"मलाई","mero":"मेरो","dherai":"धेरै",
-  "cha":"छ","chha":"छ","chaina":"छैन",
-  "huncha":"हुन्छ","bhayo":"भयो","garnu":"गर्नु",
+  "aankha":"आँखा","eye":"आँखा","headache":"टाउको दुख्छ",
+  "khana":"खाना","paani":"पानी","doctor":"डाक्टर","hospital":"अस्पताल",
+  "cha":"छ","chha":"छ","chaina":"छैन","huncha":"हुन्छ",
+  "bhayo":"भयो","mero":"मेरो","dherai":"धेरै","ramro":"राम्रो",
 };
 
 function romanToNepali(text) {
-  if (!text) return text;
-  if (/[\u0900-\u097F]/.test(text)) return text;
+  if (!text || /[\u0900-\u097F]/.test(text)) return null;
   const words = text.toLowerCase().split(/\s+/);
   const converted = words.map(w => WORD_MAP[w] || w);
   const result = converted.join(" ");
@@ -66,129 +39,88 @@ function isRoman(text) {
   return Object.keys(WORD_MAP).some(k => text.toLowerCase().includes(k));
 }
 
-// ─── Medical Knowledge Base ────────────────────────────────────
 const SYMPTOMS = [
-  {
-    id:"headache", icon:"🤕",
-    nepali:"टाउको दुख्छ", en:"Headache",
-    roman:["tauko dukhxa","tauko dukhcha","headache","head pain","tauko"],
+  { id:"headache", icon:"🤕", nepali:"टाउको दुख्छ", en:"Headache",
+    roman:["tauko dukhxa","tauko dukhcha","headache","tauko"],
     causes:["माइग्रेन","तनाव","डिहाइड्रेसन","ज्वरो"],
     advice:"पानी पिउनुहोस् र अँध्यारो कोठामा आराम गर्नुहोस्। पारासिटामोल लिन सक्नुहुन्छ।",
-    warning:"अचानक धेरै तीव्र दुखाई वा आँखा नदेख्ने भयो भने तुरुन्त अस्पताल जानुहोस्।",
-    severity:"low", color: C.orange, lightColor: C.orangeLight,
-  },
-  {
-    id:"fever", icon:"🌡️",
-    nepali:"ज्वरो आउँछ", en:"Fever",
-    roman:["jworo","jwaro","joro","fever","taato"],
+    warning:"अचानक धेरै तीव्र दुखाई भयो भने तुरुन्त अस्पताल जानुहोस्।",
+    severity:"low" },
+  { id:"fever", icon:"🌡️", nepali:"ज्वरो आउँछ", en:"Fever",
+    roman:["jworo","jwaro","joro","fever"],
     causes:["फ्लु","म्यालेरिया","टाइफाइड","डेंगी"],
-    advice:"धेरै पानी र ORS पिउनुहोस्। हल्का कपडा लगाउनुहोस्। माथामा चिसो पट्टी राख्नुहोस्।",
-    warning:"३ दिनभन्दा बढी ज्वरो रहे वा धेरै तीव्र भए डाक्टर देखाउनुहोस्।",
-    severity:"medium", color: C.orange, lightColor: C.orangeLight,
-  },
-  {
-    id:"stomach", icon:"🫃",
-    nepali:"पेट दुख्छ", en:"Stomach Pain",
-    roman:["pet dukhxa","pet dukhcha","stomach pain","peta dukhxa"],
+    advice:"धेरै पानी र ORS पिउनुहोस्। हल्का कपडा लगाउनुहोस्।",
+    warning:"३ दिनभन्दा बढी ज्वरो रहे डाक्टर देखाउनुहोस्।",
+    severity:"medium" },
+  { id:"stomach", icon:"🫃", nepali:"पेट दुख्छ", en:"Stomach Pain",
+    roman:["pet dukhxa","pet dukhcha","stomach pain"],
     causes:["ग्यास्ट्रिक","अपच","फूड पोइजनिङ"],
-    advice:"हल्का तातो पानी पिउनुहोस्। भारी खाना नखानुहोस्। आराम गर्नुहोस्।",
-    warning:"दायाँ तल्लो पेट कडा भयो वा उल्टीमा रगत आए तुरुन्त अस्पताल जानुहोस्।",
-    severity:"medium", color: C.teal, lightColor: C.tealLight,
-  },
-  {
-    id:"breathing", icon:"🫁",
-    nepali:"सास फेर्न गाह्रो", en:"Breathing Difficulty",
+    advice:"हल्का तातो पानी पिउनुहोस्। भारी खाना नखानुहोस्।",
+    warning:"दायाँ तल्लो पेट कडा भयो भने तुरुन्त अस्पताल जानुहोस्।",
+    severity:"medium" },
+  { id:"breathing", icon:"🫁", nepali:"सास फेर्न गाह्रो", en:"Breathing Difficulty",
     roman:["sas ferna garho","breathing problem","sas pherna garo"],
     causes:["अस्थमा","निमोनिया","COVID-19"],
-    advice:"सिधा बसेर ताजा हावा लिनुहोस्। कसिलो कपडा फुकाउनुहोस्।",
-    warning:"⚠️ यो गम्भीर लक्षण हो। तुरुन्त 102 मा फोन गर्नुहोस्।",
-    severity:"high", color: C.red, lightColor: C.redLight,
-  },
-  {
-    id:"cough", icon:"😮‍💨",
-    nepali:"खाँसी लाग्छ", en:"Cough",
+    advice:"सिधा बसेर ताजा हावा लिनुहोस्।",
+    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।",
+    severity:"high" },
+  { id:"cough", icon:"😮‍💨", nepali:"खाँसी लाग्छ", en:"Cough",
     roman:["khansi","khaasi","cough","khoki"],
-    causes:["रुघाखोकी","ब्रोन्काइटिस","TB","एलर्जी"],
-    advice:"तातो पानीमा मह र अदुवा मिसाएर पिउनुहोस्। भाप लिनुहोस्।",
+    causes:["रुघाखोकी","ब्रोन्काइटिस","TB"],
+    advice:"तातो पानीमा मह र अदुवा मिसाएर पिउनुहोस्।",
     warning:"२ हप्ताभन्दा बढी खोकी भए TB परीक्षण गराउनुहोस्।",
-    severity:"low", color: C.teal, lightColor: C.tealLight,
-  },
-  {
-    id:"vomiting", icon:"🤢",
-    nepali:"उल्टी हुन्छ", en:"Vomiting",
+    severity:"low" },
+  { id:"vomiting", icon:"🤢", nepali:"उल्टी हुन्छ", en:"Vomiting",
     roman:["ulti","banti","vomiting"],
     causes:["फूड पोइजनिङ","ग्यास्ट्रिक","माइग्रेन"],
-    advice:"ORS वा नुन-चिनीको पानी बिस्तारै पिउनुहोस्। आराम गर्नुहोस्।",
-    warning:"रगत आयो वा ६ घण्टाभन्दा बढी उल्टी भयो भने अस्पताल जानुहोस्।",
-    severity:"medium", color: C.purple, lightColor: C.purpleLight,
-  },
-  {
-    id:"chest", icon:"💔",
-    nepali:"छाती दुख्छ", en:"Chest Pain",
-    roman:["chhati dukhxa","chest pain","chati dukhcha"],
+    advice:"ORS वा नुन-चिनीको पानी बिस्तारै पिउनुहोस्।",
+    warning:"रगत आयो भने तुरुन्त अस्पताल जानुहोस्।",
+    severity:"medium" },
+  { id:"chest", icon:"💔", nepali:"छाती दुख्छ", en:"Chest Pain",
+    roman:["chhati dukhxa","chest pain","chati"],
     causes:["मुटुरोग","ग्यास्ट्रिक","निमोनिया"],
     advice:"बिरामीलाई सुताउनुहोस् र शान्त राख्नुहोस्।",
-    warning:"⚠️ तुरुन्त 102 मा फोन गर्नुहोस्। एक मिनेट पनि ढिलाइ नगर्नुहोस्।",
-    severity:"high", color: C.red, lightColor: C.redLight,
-  },
-  {
-    id:"dizzy", icon:"😵",
-    nepali:"चक्कर लाग्छ", en:"Dizziness",
-    roman:["chakkar","dizzy","dizziness","chakkar lagxa"],
+    warning:"तुरुन्त 102 मा फोन गर्नुहोस्।",
+    severity:"high" },
+  { id:"dizzy", icon:"😵", nepali:"चक्कर लाग्छ", en:"Dizziness",
+    roman:["chakkar","dizzy","chakkar lagxa"],
     causes:["रक्तचाप","एनिमिया","डिहाइड्रेसन"],
-    advice:"बसी आराम गर्नुहोस्। पानी पिउनुहोस्। बिस्तारै उठ्नुहोस्।",
-    warning:"बेहोस भयो वा बारम्बार चक्कर आउँछ भने डाक्टर देखाउनुहोस्।",
-    severity:"low", color: C.purple, lightColor: C.purpleLight,
-  },
+    advice:"बसी आराम गर्नुहोस्। पानी पिउनुहोस्।",
+    warning:"बेहोस भयो भने डाक्टर देखाउनुहोस्।",
+    severity:"low" },
 ];
 
 const DOCTORS = [
-  { name:"डा. सुनिता श्रेष्ठ", spec:"सामान्य चिकित्सक", avail:true, rating:"४.९", fee:"NPR ५००", wait:"अहिले उपलब्ध", avatar:"👩‍⚕️" },
-  { name:"डा. रमेश थापा", spec:"बाल रोग विशेषज्ञ", avail:true, rating:"४.८", fee:"NPR ७००", wait:"२० मिनेटमा", avatar:"👨‍⚕️" },
-  { name:"डा. प्रिया गुरुङ", spec:"स्त्री रोग विशेषज्ञ", avail:false, rating:"४.९", fee:"NPR ८००", wait:"भोलि बिहान", avatar:"👩‍⚕️" },
-  { name:"डा. अमित पाण्डे", spec:"हड्डी विशेषज्ञ", avail:true, rating:"४.७", fee:"NPR ६००", wait:"१ घण्टामा", avatar:"👨‍⚕️" },
+  { name:"डा. सुनिता श्रेष्ठ", initials:"स", spec:"सामान्य चिकित्सक",
+    avail:true, rating:4.9, reviews:284, fee:"NPR ५००", wait:"अहिले", exp:"१२ वर्ष", color:C.primary },
+  { name:"डा. रमेश थापा", initials:"र", spec:"बाल रोग विशेषज्ञ",
+    avail:true, rating:4.8, reviews:196, fee:"NPR ७००", wait:"२० मि.", exp:"८ वर्ष", color:C.secondary },
+  { name:"डा. प्रिया गुरुङ", initials:"प", spec:"स्त्री रोग विशेषज्ञ",
+    avail:false, rating:4.9, reviews:341, fee:"NPR ८००", wait:"भोलि", exp:"१५ वर्ष", color:C.purple },
+  { name:"डा. अमित पाण्डे", initials:"अ", spec:"हड्डी विशेषज्ञ",
+    avail:true, rating:4.7, reviews:158, fee:"NPR ६००", wait:"१ घण्टा", exp:"१० वर्ष", color:C.accent },
 ];
 
-const TIPS = [
-  { icon:"💧", title:"पानी पिउनुहोस्", body:"दिनमा कम्तीमा ८ गिलास सफा पानी पिउनुहोस्।" },
-  { icon:"🥗", title:"सन्तुलित खाना", body:"दाल, भात, तरकारी र फलफूल नियमित खानुहोस्।" },
-  { icon:"😴", title:"पर्याप्त निद्रा", body:"प्रतिदिन ७–८ घण्टा सुत्नुहोस्।" },
-  { icon:"🚶", title:"हिँड्नुहोस्", body:"दिनमा कम्तीमा ३० मिनेट हिँड्नुहोस्।" },
-  { icon:"🤲", title:"हात धुनुहोस्", body:"खाना अघि र शौचालय पछि साबुनले हात धुनुहोस्।" },
-  { icon:"💉", title:"खोप लगाउनुहोस्", body:"नजिकको स्वास्थ्य चौकीमा नियमित खोप लगाउनुहोस्।" },
-];
-
-// ─── AI Chat ────────────────────────────────────────────────────
 async function askAI(text, history) {
   const converted = isRoman(text) ? romanToNepali(text) : null;
-  const finalText = converted ? `${text} (अर्थात्: ${converted})` : text;
-
+  const finalText = converted ? `${text} (नेपालीमा: ${converted})` : text;
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.REACT_APP_OPENAI_KEY}`
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":`Bearer ${process.env.REACT_APP_OPENAI_KEY}`
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
-      max_tokens: 800,
-      messages: [
-        {
-          role: "system",
-          content: `तपाईं "स्वास्थ्य सहायक" हुनुहुन्छ — नेपालको ग्रामीण जनताको लागि मित्रवत् AI स्वास्थ्य सहायक।
-नियमहरू:
-- सधैँ सरल नेपाली भाषामा जवाफ दिनुहोस्
-- कहिल्यै रोगको पक्का निदान नगर्नुहोस्
-- सधैँ वास्तविक डाक्टर देखाउन सुझाव दिनुहोस्
-- आपतकालमा तुरुन्त 102 भन्नुहोस्
-- Roman मा लेखे पनि नेपालीमा जवाफ दिनुहोस्
-जवाफको ढाँचा:
+      model:"gpt-4o-mini", max_tokens:600,
+      messages:[
+        { role:"system", content:`तपाईं "स्वास्थ्य सहायक" हुनुहुन्छ। नेपालका ग्रामीण जनताको लागि सरल र मायालु स्वास्थ्य सहायक।
+नियमहरू: सधैँ सरल नेपालीमा जवाफ दिनुहोस्। रोगको पक्का निदान नगर्नुहोस्। डाक्टर देखाउन सुझाव दिनुहोस्। आपतकालमा 102 भन्नुहोस्।
+ढाँचा:
 🩺 के भइरहेको छ: [एक वाक्य]
 ✅ के गर्ने: [२-३ कदम]
-⚠️ डाक्टर कहिले: [कहिले जाने]`
-        },
+⚠️ कहिले डाक्टर: [स्पष्ट संकेत]` },
         ...history,
-        { role: "user", content: finalText }
+        { role:"user", content:finalText }
       ]
     })
   });
@@ -196,184 +128,215 @@ async function askAI(text, history) {
   return data.choices?.[0]?.message?.content || "माफ गर्नुहोस्, जवाफ दिन सकिएन।";
 }
 
-// ─── Reusable Components ────────────────────────────────────────
-function Card({ children, style={}, onClick }) {
+function Avatar({ initials, color, size=44 }) {
   return (
-    <div onClick={onClick} style={{
-      background: C.white, borderRadius: 16,
-      border: `1px solid ${C.border}`,
-      boxShadow: C.shadow, padding: 16,
-      cursor: onClick ? "pointer" : "default",
-      transition: "box-shadow 0.2s, transform 0.15s",
-      ...style
-    }}
-    onMouseEnter={e => onClick && (e.currentTarget.style.boxShadow = C.shadowMd)}
-    onMouseLeave={e => onClick && (e.currentTarget.style.boxShadow = C.shadow)}
-    >{children}</div>
+    <div style={{
+      width:size, height:size, borderRadius:"50%", background:color,
+      display:"flex", alignItems:"center", justifyContent:"center",
+      color:"#fff", fontSize:size*0.35, fontWeight:700, flexShrink:0,
+    }}>{initials}</div>
   );
 }
 
-function Badge({ children, color=C.teal, bg=C.tealLight }) {
+function StarRating({ rating }) {
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:3 }}>
+      <span style={{ color:C.warning, fontSize:12 }}>★</span>
+      <span style={{ fontSize:12, color:C.textMid, fontWeight:600 }}>{rating}</span>
+    </span>
+  );
+}
+
+function SeverityTag({ level }) {
+  const map = {
+    low:    { label:"सामान्य",        bg:C.successLight, color:C.success },
+    medium: { label:"ध्यान दिनुहोस्", bg:C.warningLight, color:C.warning },
+    high:   { label:"तत्काल!",        bg:C.dangerLight,  color:C.danger  },
+  };
+  const { label, bg, color } = map[level];
   return (
     <span style={{
-      background: bg, color, borderRadius: 20,
-      padding:"3px 12px", fontSize:11, fontWeight:600,
-      display:"inline-block", letterSpacing: 0.3
-    }}>{children}</span>
+      background:bg, color, borderRadius:6, padding:"3px 10px",
+      fontSize:11, fontWeight:700, letterSpacing:0.3, display:"inline-block"
+    }}>{label}</span>
   );
 }
 
-function PrimaryBtn({ children, onClick, disabled=false, color=C.teal, style={} }) {
+function SectionHeader({ title, action, onAction }) {
   return (
-    <button onClick={onClick} disabled={disabled} style={{
-      background: disabled ? C.border : color,
-      color: "#fff", border:"none", borderRadius:12,
-      padding:"13px 20px", fontSize:15, fontWeight:700,
-      cursor: disabled ? "not-allowed" : "pointer",
-      width:"100%", fontFamily:"inherit",
-      boxShadow: disabled ? "none" : `0 4px 12px ${color}44`,
-      transition:"all 0.2s", opacity: disabled ? 0.6 : 1,
-      ...style
-    }}>{children}</button>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+      <span style={{ fontSize:15, fontWeight:700, color:C.text }}>{title}</span>
+      {action && (
+        <button onClick={onAction} style={{
+          background:"none", border:"none", color:C.primary,
+          fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit"
+        }}>{action} →</button>
+      )}
+    </div>
   );
 }
 
-function SeverityBar({ level }) {
-  const cfg = {
-    low:    { label:"सामान्य", color: C.green, bg: C.greenLight },
-    medium: { label:"ध्यान दिनुहोस्", color: C.orange, bg: C.orangeLight },
-    high:   { label:"तत्काल चाहिन्छ!", color: C.red, bg: C.redLight },
-  };
-  const { label, color, bg } = cfg[level] || cfg.low;
-  return <Badge color={color} bg={bg}>{label}</Badge>;
-}
-
-// ─── Bottom Nav ────────────────────────────────────────────────
-function NavBar({ tab, setTab }) {
+function BottomNav({ tab, setTab }) {
   const items = [
-    { id:"home",    icon:"🏠", label:"घर" },
-    { id:"check",   icon:"🩺", label:"जाँच" },
-    { id:"chat",    icon:"💬", label:"सहायक" },
-    { id:"doctors", icon:"👨‍⚕️", label:"डाक्टर" },
-    { id:"tips",    icon:"💡", label:"सुझाव" },
+    { id:"home",    emoji:"🏠", label:"घर" },
+    { id:"check",   emoji:"🩺", label:"जाँच" },
+    { id:"chat",    emoji:"💬", label:"सहायक" },
+    { id:"doctors", emoji:"👨‍⚕️", label:"डाक्टर" },
+    { id:"tips",    emoji:"💡", label:"सुझाव" },
   ];
   return (
     <div style={{
       position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
-      width:"100%", maxWidth:480,
-      background: C.white, borderTop:`1px solid ${C.border}`,
-      display:"flex", zIndex:100,
-      boxShadow:"0 -4px 12px rgba(0,0,0,0.06)"
+      width:"100%", maxWidth:480, background:C.white,
+      borderTop:`1px solid ${C.border}`, display:"flex", zIndex:100,
+      boxShadow:"0 -2px 10px rgba(0,0,0,0.06)"
     }}>
-      {items.map(it => (
-        <button key={it.id} onClick={() => setTab(it.id)} style={{
-          flex:1, padding:"10px 4px 12px",
-          background:"none", border:"none", cursor:"pointer",
-          display:"flex", flexDirection:"column", alignItems:"center", gap:3,
-          borderTop: tab===it.id ? `2px solid ${C.teal}` : "2px solid transparent",
-          transition:"all 0.15s"
-        }}>
-          <span style={{ fontSize:20 }}>{it.icon}</span>
-          <span style={{
-            fontSize:10, fontFamily:"inherit", fontWeight: tab===it.id ? 700 : 400,
-            color: tab===it.id ? C.teal : C.textLight
-          }}>{it.label}</span>
-        </button>
-      ))}
+      {items.map(it => {
+        const active = tab === it.id;
+        return (
+          <button key={it.id} onClick={() => setTab(it.id)} style={{
+            flex:1, padding:"8px 4px 10px", background:"none",
+            border:"none", cursor:"pointer",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+            borderTop:`2px solid ${active ? C.primary : "transparent"}`,
+            transition:"border-color 0.2s"
+          }}>
+            <span style={{ fontSize:20 }}>{it.emoji}</span>
+            <span style={{
+              fontSize:9, fontWeight:active?700:400,
+              color:active?C.primary:C.textLight, fontFamily:"inherit"
+            }}>{it.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Screen: HOME ──────────────────────────────────────────────
 function HomeScreen({ setTab, pickSymptom }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "शुभ प्रभात" : hour < 17 ? "नमस्ते" : "शुभ सन्ध्या";
   return (
-    <div style={{ padding:"20px 16px 100px", animation:"rise 0.4s ease" }}>
-
-      {/* Header greeting */}
-      <div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:13, color:C.textLight, fontWeight:500, marginBottom:4 }}>
-          नमस्ते 🙏
-        </div>
-        <div style={{ fontSize:26, fontWeight:800, color:C.text, lineHeight:1.2, marginBottom:6 }}>
-          स्वास्थ्य सहायक
-        </div>
-        <div style={{ fontSize:13, color:C.textMid, lineHeight:1.6 }}>
-          तपाईंको स्वास्थ्य समस्याको लागि<br/>
-          <strong style={{ color:C.teal }}>निःशुल्क AI मार्गदर्शन</strong>
-        </div>
-      </div>
-
-      {/* Main action cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
-        <Card onClick={() => setTab("check")} style={{ textAlign:"center", padding:"20px 12px" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>🩺</div>
-          <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>लक्षण जाँच</div>
-          <div style={{ fontSize:11, color:C.textLight }}>के समस्या छ?</div>
-        </Card>
-        <Card onClick={() => setTab("chat")} style={{ textAlign:"center", padding:"20px 12px" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>💬</div>
-          <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>AI सँग कुरा</div>
-          <div style={{ fontSize:11, color:C.textLight }}>Nepali मा सोध्नुहोस्</div>
-        </Card>
-        <Card onClick={() => setTab("doctors")} style={{ textAlign:"center", padding:"20px 12px" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>👨‍⚕️</div>
-          <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>डाक्टर भेट्नुहोस्</div>
-          <div style={{ fontSize:11, color:C.textLight }}>भिडियो परामर्श</div>
-        </Card>
-        <Card onClick={() => setTab("tips")} style={{ textAlign:"center", padding:"20px 12px" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>💡</div>
-          <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>स्वास्थ्य सुझाव</div>
-          <div style={{ fontSize:11, color:C.textLight }}>राम्रो बानी</div>
-        </Card>
-      </div>
-
-      {/* Emergency */}
+    <div style={{ paddingBottom:90 }}>
       <div style={{
-        background:"#FFF1F2", border:`1.5px solid #FECACA`,
-        borderRadius:14, padding:"14px 16px", marginBottom:16,
-        display:"flex", alignItems:"center", gap:14
+        background:`linear-gradient(135deg, ${C.primaryDark} 0%, ${C.primary} 60%, #2196A6 100%)`,
+        padding:"24px 20px 32px", position:"relative", overflow:"hidden"
       }}>
-        <div style={{
-          width:44, height:44, borderRadius:"50%",
-          background:C.redLight, display:"flex",
-          alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0
-        }}>🚨</div>
-        <div>
-          <div style={{ fontSize:13, fontWeight:700, color:C.red, marginBottom:2 }}>
-            आपतकालीन अवस्थामा
-          </div>
-          <div style={{ fontSize:13, color:"#991B1B" }}>
-            एम्बुलेन्स: <strong style={{ fontSize:16 }}>102</strong>
-            &nbsp;&nbsp;प्रहरी: <strong>100</strong>
-          </div>
+        <div style={{ position:"absolute", top:-40, right:-40, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }}/>
+        <div style={{ position:"absolute", bottom:-30, right:40, width:100, height:100, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }}/>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", marginBottom:4, fontWeight:500 }}>{greeting} 🙏</div>
+          <div style={{ fontSize:24, fontWeight:800, color:"#fff", lineHeight:1.2, marginBottom:6 }}>तपाईंलाई आज<br/>कस्तो छ?</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", marginBottom:20 }}>Roman मा टाइप गर्नुहोस् — हामी बुझ्छौँ</div>
+          <button onClick={() => setTab("check")} style={{
+            background:"rgba(255,255,255,0.15)", backdropFilter:"blur(10px)",
+            border:"1px solid rgba(255,255,255,0.3)", borderRadius:12,
+            padding:"12px 16px", display:"flex", alignItems:"center", gap:10,
+            width:"100%", cursor:"pointer", textAlign:"left"
+          }}>
+            <span style={{ color:"rgba(255,255,255,0.7)", fontSize:16 }}>🔍</span>
+            <span style={{ color:"rgba(255,255,255,0.6)", fontSize:14, fontFamily:"inherit" }}>
+              tauko dukhxa, jworo... खोज्नुहोस्
+            </span>
+          </button>
         </div>
       </div>
 
-      {/* Quick symptom buttons */}
-      <div style={{ marginBottom:8 }}>
-        <div style={{ fontSize:12, fontWeight:600, color:C.textLight, letterSpacing:0.5, marginBottom:10, textTransform:"uppercase" }}>
-          सामान्य समस्याहरू
+      <div style={{ padding:"0 16px" }}>
+        <div style={{
+          background:C.dangerLight, border:`1px solid #FEB2B2`,
+          borderRadius:12, padding:"10px 14px", margin:"14px 0",
+          display:"flex", alignItems:"center", justifyContent:"space-between"
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:C.danger, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>🚨</div>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:C.danger }}>आपतकालीन</div>
+              <div style={{ fontSize:11, color:"#C53030" }}>एम्बुलेन्स · प्रहरी</div>
+            </div>
+          </div>
+          <a href="tel:102" style={{
+            background:C.danger, color:"#fff", borderRadius:8,
+            padding:"7px 16px", fontSize:15, fontWeight:800, textDecoration:"none"
+          }}>📞 102</a>
         </div>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-          {SYMPTOMS.slice(0,6).map(s => (
-            <button key={s.id} onClick={() => { pickSymptom(s); setTab("check"); }} style={{
-              background: s.lightColor, color: s.color,
-              border:`1.5px solid ${s.color}33`,
-              borderRadius:24, padding:"8px 14px",
-              fontSize:13, fontWeight:600, cursor:"pointer",
-              fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
-              transition:"all 0.15s"
+
+        <SectionHeader title="के गर्नु छ?" />
+        <div onClick={() => setTab("chat")} style={{
+          background:`linear-gradient(135deg, ${C.secondary} 0%, #007A6E 100%)`,
+          borderRadius:16, padding:"18px 20px", marginBottom:10, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          boxShadow:`0 4px 15px ${C.secondary}44`
+        }}>
+          <div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", fontWeight:600, letterSpacing:1, marginBottom:4 }}>AI HEALTH ASSISTANT</div>
+            <div style={{ fontSize:18, fontWeight:800, color:"#fff", marginBottom:3 }}>AI सँग कुरा गर्नुहोस्</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)" }}>Nepali · Roman · English</div>
+          </div>
+          <div style={{ width:52, height:52, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26 }}>💬</div>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
+          {[
+            { icon:"🩺", label:"लक्षण जाँच", sub:"के समस्या छ?", tab:"check", bg:C.primaryLight, color:C.primary },
+            { icon:"👨‍⚕️", label:"डाक्टर भेट्नुहोस्", sub:"भिडियो परामर्श", tab:"doctors", bg:C.purpleLight, color:C.purple },
+          ].map(item => (
+            <div key={item.tab} onClick={() => setTab(item.tab)} style={{
+              background:item.bg, borderRadius:14, padding:"16px 14px",
+              cursor:"pointer", border:`1px solid ${item.color}22`
             }}>
-              <span>{s.icon}</span> {s.nepali}
+              <div style={{ fontSize:28, marginBottom:8 }}>{item.icon}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:2 }}>{item.label}</div>
+              <div style={{ fontSize:11, color:C.textLight }}>{item.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <SectionHeader title="सामान्य समस्याहरू" action="सबै हेर्नुहोस्" onAction={() => setTab("check")} />
+        <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:20 }}>
+          {SYMPTOMS.map(s => (
+            <button key={s.id} onClick={() => { pickSymptom(s); setTab("check"); }} style={{
+              background:C.white, border:`1px solid ${C.border}`, borderRadius:12,
+              padding:"10px 12px", flexShrink:0, cursor:"pointer", fontFamily:"inherit",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:4,
+              minWidth:76, boxShadow:"0 1px 3px rgba(0,0,0,0.06)"
+            }}>
+              <span style={{ fontSize:22 }}>{s.icon}</span>
+              <span style={{ fontSize:10, color:C.textMid, fontWeight:500, textAlign:"center", lineHeight:1.3 }}>
+                {s.en}
+              </span>
             </button>
           ))}
         </div>
+
+        <SectionHeader title="उपलब्ध डाक्टरहरू" action="सबै हेर्नुहोस्" onAction={() => setTab("doctors")} />
+        {DOCTORS.filter(d=>d.avail).slice(0,2).map((d,i) => (
+          <div key={i} onClick={() => setTab("doctors")} style={{
+            background:C.white, border:`1px solid ${C.border}`,
+            borderRadius:14, padding:"14px", marginBottom:10, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:12,
+            boxShadow:"0 1px 4px rgba(0,0,0,0.06)"
+          }}>
+            <Avatar initials={d.initials} color={d.color} size={48} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:2 }}>{d.name}</div>
+              <div style={{ fontSize:11, color:C.textLight, marginBottom:4 }}>{d.spec}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <StarRating rating={d.rating} />
+                <span style={{ fontSize:11, color:C.textLight }}>({d.reviews})</span>
+              </div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ background:C.successLight, color:C.success, borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, marginBottom:4 }}>{d.wait}</div>
+              <div style={{ fontSize:12, color:C.textMid, fontWeight:600 }}>{d.fee}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Screen: SYMPTOM CHECKER ───────────────────────────────────
 function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(initialSymptom ? [initialSymptom] : []);
@@ -384,12 +347,7 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
     if (initialSymptom) { setSelected([initialSymptom]); setResult([initialSymptom]); }
   }, [initialSymptom]);
 
-  function handleQuery(val) {
-    setQuery(val);
-    setResult(null);
-    const p = romanToNepali(val);
-    setPreview(p || "");
-  }
+  function handleQuery(val) { setQuery(val); setResult(null); setPreview(romanToNepali(val)||""); }
 
   function search() {
     const lower = query.toLowerCase();
@@ -402,178 +360,85 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
     setResult(found.length ? found : []);
   }
 
-  function toggleSymptom(s) {
-    setSelected(p => p.includes(s) ? p.filter(x=>x!==s) : [...p,s]);
-    setResult(null);
-  }
-
-  const worstSev = result?.reduce((w,s) => {
-    const o={low:0,medium:1,high:2};
-    return o[s.severity]>o[w] ? s.severity : w;
-  },"low");
+  const worstSev = result?.reduce((w,s) => { const o={low:0,medium:1,high:2}; return o[s.severity]>o[w]?s.severity:w; },"low");
 
   return (
-    <div style={{ padding:"20px 16px 100px", animation:"rise 0.3s ease" }}>
+    <div style={{ padding:"20px 16px 100px" }}>
       <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>लक्षण जाँच</div>
-      <div style={{ fontSize:13, color:C.textLight, marginBottom:16 }}>
-        Roman वा नेपाली मा लेख्नुहोस् — दुवै बुझ्छ
+      <div style={{ fontSize:13, color:C.textLight, marginBottom:20 }}>Roman वा नेपाली — दुवै बुझ्छ</div>
+
+      <div style={{ background:C.white, borderRadius:14, padding:16, border:`1px solid ${C.border}`, marginBottom:16, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:10, border:`1.5px solid ${C.border}`, borderRadius:10, padding:"10px 12px", background:C.bg, marginBottom:10 }}>
+          <span style={{ color:C.textLight, marginTop:3, fontSize:16 }}>🔍</span>
+          <textarea value={query} onChange={e=>handleQuery(e.target.value)}
+            placeholder={"tauko dukhxa...\nटाउको दुख्छ...\nheadache and fever..."} rows={2}
+            style={{ flex:1, border:"none", background:"none", outline:"none", fontSize:14, fontFamily:"inherit", color:C.text, resize:"none", lineHeight:1.6 }}
+          />
+        </div>
+        {preview && <div style={{ padding:"7px 12px", background:C.primaryLight, borderRadius:8, fontSize:13, color:C.primary, fontWeight:600, marginBottom:10 }}>✓ बुझियो: {preview}</div>}
+        <button onClick={search} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>जाँच गर्नुहोस्</button>
       </div>
 
-      {/* Search box */}
-      <Card style={{ marginBottom:14, padding:14 }}>
-        <textarea
-          value={query}
-          onChange={e => handleQuery(e.target.value)}
-          placeholder={"tauko dukhxa...\nटाउको दुख्छ...\nI have headache and fever..."}
-          rows={3}
-          style={{
-            width:"100%", border:`1.5px solid ${C.border}`,
-            borderRadius:10, padding:"10px 12px",
-            fontSize:14, fontFamily:"inherit", color:C.text,
-            background:C.bg, outline:"none", resize:"none",
-            lineHeight:1.6, boxSizing:"border-box"
-          }}
-          onFocus={e => e.target.style.borderColor = C.teal}
-          onBlur={e => e.target.style.borderColor = C.border}
-        />
-        {preview && (
-          <div style={{
-            marginTop:8, padding:"7px 12px",
-            background:C.tealLight, borderRadius:8,
-            fontSize:13, color:C.tealDark, fontWeight:500
-          }}>
-            ✓ बुझियो: <strong>{preview}</strong>
-          </div>
-        )}
-        <PrimaryBtn onClick={search} style={{ marginTop:10 }}>
-          🔍 जाँच गर्नुहोस्
-        </PrimaryBtn>
-      </Card>
-
-      {/* OR pick */}
-      <div style={{ fontSize:12, fontWeight:600, color:C.textLight, letterSpacing:0.5, marginBottom:10, textTransform:"uppercase" }}>
-        वा छान्नुहोस्
-      </div>
-      <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16 }}>
-        {SYMPTOMS.map(s => {
-          const on = selected.includes(s);
-          return (
-            <button key={s.id} onClick={() => toggleSymptom(s)} style={{
-              background: on ? s.color : C.white,
-              color: on ? "#fff" : C.text,
-              border:`1.5px solid ${on ? s.color : C.border}`,
-              borderRadius:24, padding:"8px 14px",
-              fontSize:13, fontWeight:600, cursor:"pointer",
-              fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
-              transition:"all 0.15s",
-              boxShadow: on ? `0 2px 8px ${s.color}44` : "none"
-            }}>
-              {s.icon} {s.nepali}
-            </button>
-          );
-        })}
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:12, fontWeight:600, color:C.textLight, textTransform:"uppercase", letterSpacing:0.5, marginBottom:10 }}>वा छान्नुहोस्</div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+          {SYMPTOMS.map(s => {
+            const on = selected.includes(s);
+            return (
+              <button key={s.id} onClick={() => { setSelected(p=>on?p.filter(x=>x!==s):[...p,s]); setResult(null); }} style={{
+                background:on?C.primary:C.white, color:on?"#fff":C.textMid,
+                border:`1.5px solid ${on?C.primary:C.border}`, borderRadius:24,
+                padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer",
+                fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
+                boxShadow:on?`0 2px 8px ${C.primary}44`:"0 1px 3px rgba(0,0,0,0.05)"
+              }}>{s.icon} {s.nepali}</button>
+            );
+          })}
+        </div>
       </div>
 
       {selected.length > 0 && !result && (
-        <PrimaryBtn onClick={() => setResult(selected)} style={{ marginBottom:16 }}>
-          ⚡ {selected.length} लक्षण जाँच गर्नुहोस्
-        </PrimaryBtn>
+        <button onClick={() => setResult(selected)} style={{ width:"100%", background:C.primary, color:"#fff", border:"none", borderRadius:12, padding:"13px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:16 }}>
+          {selected.length} वटा लक्षण जाँच गर्नुहोस्
+        </button>
       )}
 
-      {/* Results */}
       {result !== null && (
-        <div style={{ animation:"rise 0.3s ease" }}>
+        <div>
           {result.length === 0 ? (
-            <Card>
-              <div style={{ textAlign:"center", padding:16 }}>
-                <div style={{ fontSize:40, marginBottom:8 }}>🤔</div>
-                <div style={{ fontSize:14, color:C.text, fontWeight:600, marginBottom:4 }}>
-                  लक्षण भेटिएन
-                </div>
-                <div style={{ fontSize:13, color:C.textLight }}>
-                  AI सहायकसँग कुरा गर्नुहोस्
-                </div>
-              </div>
-            </Card>
+            <div style={{ background:C.white, borderRadius:14, padding:24, textAlign:"center", border:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:40, marginBottom:8 }}>🤔</div>
+              <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:4 }}>लक्षण भेटिएन</div>
+              <div style={{ fontSize:13, color:C.textLight }}>AI सहायकसँग कुरा गर्नुहोस्</div>
+            </div>
           ) : (
             <>
-              {/* Severity summary */}
-              <div style={{
-                background: worstSev==="high" ? C.redLight : worstSev==="medium" ? C.orangeLight : C.greenLight,
-                border:`1.5px solid ${worstSev==="high" ? C.red : worstSev==="medium" ? C.orange : C.green}33`,
-                borderRadius:14, padding:"12px 16px", marginBottom:14,
-                display:"flex", alignItems:"center", gap:12
-              }}>
-                <span style={{ fontSize:28 }}>
-                  {worstSev==="high" ? "🚨" : worstSev==="medium" ? "⚠️" : "✅"}
-                </span>
-                <div>
-                  <SeverityBar level={worstSev} />
-                  <div style={{ fontSize:12, color:C.textMid, marginTop:3 }}>
-                    {result.length} वटा लक्षण विश्लेषण गरियो
-                  </div>
-                </div>
+              <div style={{ background:worstSev==="high"?C.dangerLight:worstSev==="medium"?C.warningLight:C.successLight, borderRadius:12, padding:"12px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:24 }}>{worstSev==="high"?"🚨":worstSev==="medium"?"⚠️":"✅"}</span>
+                <div><SeverityTag level={worstSev} /><div style={{ fontSize:11, color:C.textMid, marginTop:3 }}>{result.length} वटा लक्षण विश्लेषण गरियो</div></div>
               </div>
-
               {result.map((s,i) => (
-                <Card key={i} style={{ marginBottom:12 }}>
+                <div key={i} style={{ background:C.white, borderRadius:14, padding:16, marginBottom:12, border:`1px solid ${C.border}`, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
                     <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                      <div style={{
-                        width:44, height:44, borderRadius:12,
-                        background:s.lightColor,
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        fontSize:22, flexShrink:0
-                      }}>{s.icon}</div>
-                      <div>
-                        <div style={{ fontSize:15, fontWeight:700, color:C.text }}>{s.nepali}</div>
-                        <div style={{ fontSize:11, color:C.textLight }}>{s.en}</div>
-                      </div>
+                      <div style={{ width:44, height:44, borderRadius:12, background:C.primaryLight, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{s.icon}</div>
+                      <div><div style={{ fontSize:15, fontWeight:700, color:C.text }}>{s.nepali}</div><div style={{ fontSize:11, color:C.textLight }}>{s.en}</div></div>
                     </div>
-                    <SeverityBar level={s.severity} />
+                    <SeverityTag level={s.severity} />
                   </div>
-
                   <div style={{ marginBottom:10 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:C.textLight, textTransform:"uppercase", letterSpacing:0.5, marginBottom:6 }}>
-                      सम्भावित कारण
-                    </div>
+                    <div style={{ fontSize:11, fontWeight:600, color:C.textLight, textTransform:"uppercase", letterSpacing:0.5, marginBottom:6 }}>सम्भावित कारण</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {s.causes.map((c,j) => (
-                        <Badge key={j} color={s.color} bg={s.lightColor}>{c}</Badge>
-                      ))}
+                      {s.causes.map((c,j) => <span key={j} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, padding:"3px 10px", fontSize:11, color:C.textMid }}>{c}</span>)}
                     </div>
                   </div>
-
-                  <div style={{
-                    background:C.tealLight, borderLeft:`3px solid ${C.teal}`,
-                    borderRadius:"0 10px 10px 0", padding:"10px 14px",
-                    fontSize:13, color:C.tealDark, lineHeight:1.7, marginBottom:8
-                  }}>
-                    {s.advice}
-                  </div>
-
-                  {s.severity !== "low" && (
-                    <div style={{
-                      background:s.severity==="high" ? C.redLight : C.orangeLight,
-                      borderRadius:10, padding:"10px 14px",
-                      fontSize:13, color:s.severity==="high" ? C.red : C.orange,
-                      lineHeight:1.6, fontWeight:500
-                    }}>
-                      {s.warning}
-                    </div>
-                  )}
-                </Card>
+                  <div style={{ background:C.primaryLight, borderLeft:`3px solid ${C.primary}`, borderRadius:"0 10px 10px 0", padding:"10px 14px", fontSize:13, color:C.primaryDark, lineHeight:1.7, marginBottom:8 }}>{s.advice}</div>
+                  {s.severity !== "low" && <div style={{ background:s.severity==="high"?C.dangerLight:C.warningLight, borderRadius:10, padding:"10px 14px", fontSize:13, color:s.severity==="high"?C.danger:C.warning, fontWeight:500 }}>⚠️ {s.warning}</div>}
+                </div>
               ))}
-
-              <PrimaryBtn
-                color={C.purple}
-                onClick={() => {
-                  setChatSeed(`मलाई यी लक्षणहरू छन्: ${result.map(s=>s.nepali).join(", ")}। के गर्नु पर्छ?`);
-                  setTab("chat");
-                }}
-              >
-                💬 AI सहायकसँग थप जानकारी लिनुहोस् →
-              </PrimaryBtn>
+              <button onClick={() => { setChatSeed(`मलाई यी लक्षणहरू छन्: ${result.map(s=>s.nepali).join(", ")}। के गर्नु पर्छ?`); setTab("chat"); }} style={{ width:"100%", background:C.white, color:C.primary, border:`1.5px solid ${C.primary}`, borderRadius:12, padding:"12px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                💬 AI सहायकसँग थप जानकारी लिनुहोस्
+              </button>
             </>
           )}
         </div>
@@ -582,12 +447,8 @@ function CheckScreen({ initialSymptom, setTab, setChatSeed }) {
   );
 }
 
-// ─── Screen: CHAT ──────────────────────────────────────────────
 function ChatScreen({ seed, setSeed, online }) {
-  const [msgs, setMsgs] = useState([{
-    role:"assistant",
-    text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nतपाईं Roman मा पनि टाइप गर्न सक्नुहुन्छ — जस्तै \"tauko dukhxa\" — म बुझ्छु।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको सट्टा होइन।"
-  }]);
+  const [msgs, setMsgs] = useState([{ role:"assistant", text:"नमस्ते! म तपाईंको स्वास्थ्य सहायक हुँ। 🙏\n\nRoman मा पनि लेख्नुहोस् — \"tauko dukhxa\", \"jworo\" — म बुझ्छु।\n\n⚠️ म AI हुँ। वास्तविक डाक्टरको होइन।" }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -597,10 +458,7 @@ function ChatScreen({ seed, setSeed, online }) {
   useEffect(() => { if(seed){ setInput(seed); setSeed(null); } }, [seed, setSeed]);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs]);
 
-  function handleInput(val) {
-    setInput(val);
-    setPreview(isRoman(val) ? (romanToNepali(val) || "") : "");
-  }
+  function handleInput(val) { setInput(val); setPreview(isRoman(val)?(romanToNepali(val)||""):""); }
 
   async function send() {
     const text = input.trim();
@@ -608,289 +466,156 @@ function ChatScreen({ seed, setSeed, online }) {
     setInput(""); setPreview("");
     setMsgs(p => [...p, { role:"user", text }]);
     setLoading(true);
-
     if (!online) {
       setTimeout(() => {
         const match = SYMPTOMS.find(s => s.roman.some(r => text.toLowerCase().includes(r.split(" ")[0])));
-        const reply = match
-          ? `🩺 के भइरहेको छ: ${match.nepali} जस्तो देखिन्छ।\n✅ के गर्ने: ${match.advice}\n⚠️ डाक्टर कहिले: ${match.warning}\n\n📶 इन्टरनेट भएपछि थप विस्तृत जवाफ पाउनुहुन्छ।`
-          : "अफलाइन मोडमा सीमित जवाफ मात्र छ। नजिकको स्वास्थ्य चौकीमा जानुहोस्।";
+        const reply = match ? `🩺 के भइरहेको छ: ${match.nepali} जस्तो देखिन्छ।\n✅ के गर्ने: ${match.advice}\n⚠️ कहिले डाक्टर: ${match.warning}` : "अफलाइन मोडमा सीमित जवाफ मात्र। नजिकको स्वास्थ्य चौकीमा जानुहोस्।";
         setMsgs(p => [...p, { role:"assistant", text:reply }]);
         setLoading(false);
       }, 600);
       return;
     }
-
     try {
       const reply = await askAI(text, history);
       setHistory(h => [...h, {role:"user",content:text}, {role:"assistant",content:reply}].slice(-12));
       setMsgs(p => [...p, { role:"assistant", text:reply }]);
-    } catch {
-      setMsgs(p => [...p, { role:"assistant", text:"माफ गर्नुहोस्, अहिले जडान गर्न सकिएन। पुनः प्रयास गर्नुहोस्।" }]);
-    }
+    } catch { setMsgs(p => [...p, { role:"assistant", text:"माफ गर्नुहोस्, जडान भएन। पुनः प्रयास गर्नुहोस्।" }]); }
     setLoading(false);
   }
 
   function renderMsg(text) {
     return text.split("\n").map((line, i) => {
-      if (!line.trim()) return <div key={i} style={{ height:4 }} />;
-      const isHeader = line.startsWith("🩺") || line.startsWith("✅") || line.startsWith("⚠️");
-      return (
-        <div key={i} style={{
-          fontSize:13, lineHeight:1.7,
-          color: isHeader ? C.teal : C.text,
-          fontWeight: isHeader ? 600 : 400,
-          marginTop: isHeader ? 6 : 0
-        }}>{line}</div>
-      );
+      if (!line.trim()) return <div key={i} style={{ height:4 }}/>;
+      const isHeader = /^[🩺✅⚠️📶]/.test(line);
+      return <div key={i} style={{ fontSize:13, lineHeight:1.75, color:isHeader?C.primaryDark:C.text, fontWeight:isHeader?600:400, marginTop:isHeader?6:0 }}>{line}</div>;
     });
   }
 
-  const quickQ = ["के गर्नु पर्छ?","कुन दवाई?","डाक्टर जानुपर्छ?","घरमा उपाय?","कति गम्भीर छ?"];
-
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 108px)" }}>
-      {/* Messages */}
       <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 8px" }}>
         {msgs.map((m,i) => (
-          <div key={i} style={{
-            display:"flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start",
-            marginBottom:14, gap:8, animation:"rise 0.2s ease"
-          }}>
-            {m.role==="assistant" && (
-              <div style={{
-                width:34, height:34, borderRadius:"50%", flexShrink:0,
-                background:C.tealLight, border:`1.5px solid ${C.teal}33`,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:18, marginTop:2
-              }}>🏥</div>
-            )}
-            <div style={{
-              maxWidth:"78%",
-              background: m.role==="user" ? C.teal : C.white,
-              border:`1px solid ${m.role==="user" ? "transparent" : C.border}`,
-              borderRadius: m.role==="user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-              padding:"10px 14px",
-              boxShadow: C.shadow
-            }}>
-              {m.role==="user"
-                ? <div style={{ fontSize:13, color:"#fff", lineHeight:1.6 }}>{m.text}</div>
-                : renderMsg(m.text)
-              }
+          <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start", marginBottom:14, gap:8 }}>
+            {m.role==="assistant" && <Avatar initials="AI" color={C.primary} size={32} />}
+            <div style={{ maxWidth:"78%", background:m.role==="user"?C.primary:C.white, border:m.role==="user"?"none":`1px solid ${C.border}`, borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px", padding:"10px 14px", boxShadow:"0 1px 4px rgba(0,0,0,0.08)" }}>
+              {m.role==="user" ? <div style={{ fontSize:13, color:"#fff", lineHeight:1.6 }}>{m.text}</div> : renderMsg(m.text)}
             </div>
           </div>
         ))}
         {loading && (
           <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-            <div style={{
-              width:34, height:34, borderRadius:"50%",
-              background:C.tealLight, border:`1.5px solid ${C.teal}33`,
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:18
-            }}>🏥</div>
-            <div style={{
-              background:C.white, border:`1px solid ${C.border}`,
-              borderRadius:"18px 18px 18px 4px", padding:"12px 16px",
-              display:"flex", gap:5, alignItems:"center", boxShadow:C.shadow
-            }}>
-              {[0,0.2,0.4].map((d,j)=>(
-                <div key={j} style={{
-                  width:7, height:7, borderRadius:"50%", background:C.teal,
-                  animation:`bounce 0.8s ${d}s infinite`
-                }}/>
-              ))}
+            <Avatar initials="AI" color={C.primary} size={32} />
+            <div style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:"18px 18px 18px 4px", padding:"14px 16px", display:"flex", gap:5, alignItems:"center" }}>
+              {[0,0.15,0.3].map((d,j)=><div key={j} style={{ width:7, height:7, borderRadius:"50%", background:C.primary, opacity:0.7, animation:`typingDot 1s ${d}s infinite` }}/>)}
             </div>
           </div>
         )}
         <div ref={bottom}/>
       </div>
-
-      {/* Quick questions */}
-      <div style={{ padding:"6px 12px", display:"flex", gap:6, overflowX:"auto", paddingBottom:8 }}>
-        {quickQ.map((q,i)=>(
-          <button key={i} onClick={()=>setInput(q)} style={{
-            background:C.white, border:`1px solid ${C.border}`,
-            borderRadius:20, padding:"6px 12px", whiteSpace:"nowrap",
-            color:C.textMid, fontSize:11, fontFamily:"inherit",
-            cursor:"pointer", flexShrink:0, boxShadow:C.shadow
-          }}>{q}</button>
+      <div style={{ padding:"6px 12px 8px", display:"flex", gap:6, overflowX:"auto" }}>
+        {["के गर्नु पर्छ?","कुन दवाई?","डाक्टर जानुपर्छ?","घरमा उपाय?"].map((q,i)=>(
+          <button key={i} onClick={()=>setInput(q)} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:20, padding:"6px 14px", whiteSpace:"nowrap", color:C.textMid, fontSize:11, fontFamily:"inherit", cursor:"pointer", flexShrink:0 }}>{q}</button>
         ))}
       </div>
-
-      {/* Input */}
-      <div style={{
-        padding:"8px 12px 14px", borderTop:`1px solid ${C.border}`,
-        background:C.white
-      }}>
-        {preview && (
-          <div style={{
-            marginBottom:6, padding:"5px 12px",
-            background:C.tealLight, borderRadius:8,
-            fontSize:12, color:C.tealDark, fontWeight:500
-          }}>✓ {preview}</div>
-        )}
-        {!online && (
-          <div style={{
-            marginBottom:6, padding:"5px 12px",
-            background:C.orangeLight, borderRadius:8,
-            fontSize:11, color:C.orange
-          }}>⚠️ अफलाइन — सीमित जवाफ मात्र</div>
-        )}
+      <div style={{ padding:"8px 12px 16px", borderTop:`1px solid ${C.border}`, background:C.white }}>
+        {preview && <div style={{ marginBottom:6, padding:"5px 12px", background:C.primaryLight, borderRadius:8, fontSize:12, color:C.primary, fontWeight:600 }}>✓ {preview}</div>}
         <div style={{ display:"flex", gap:8 }}>
-          <input
-            value={input}
-            onChange={e=>handleInput(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&send()}
+          <input value={input} onChange={e=>handleInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
             placeholder="tauko dukhxa... वा नेपाली मा..."
-            style={{
-              flex:1, border:`1.5px solid ${C.border}`, borderRadius:24,
-              padding:"11px 16px", fontSize:14, fontFamily:"inherit",
-              color:C.text, outline:"none", background:C.bg
-            }}
-            onFocus={e=>e.target.style.borderColor=C.teal}
-            onBlur={e=>e.target.style.borderColor=C.border}
+            style={{ flex:1, border:`1.5px solid ${C.border}`, borderRadius:24, padding:"11px 16px", fontSize:13, fontFamily:"inherit", color:C.text, outline:"none", background:C.bg }}
+            onFocus={e=>e.target.style.borderColor=C.primary} onBlur={e=>e.target.style.borderColor=C.border}
           />
-          <button onClick={send} disabled={loading||!input.trim()} style={{
-            width:46, height:46, borderRadius:"50%", flexShrink:0,
-            background: input.trim()&&!loading ? C.teal : C.border,
-            border:"none", cursor:"pointer", fontSize:18,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            transition:"background 0.2s",
-            boxShadow: input.trim() ? `0 4px 12px ${C.teal}44` : "none"
-          }}>➤</button>
+          <button onClick={send} disabled={loading||!input.trim()} style={{ width:46, height:46, borderRadius:"50%", flexShrink:0, background:input.trim()&&!loading?C.primary:C.border, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:16, transition:"background 0.2s" }}>➤</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Screen: DOCTORS ──────────────────────────────────────────
 function DoctorsScreen() {
   const [booked, setBooked] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const filtered = filter==="available" ? DOCTORS.filter(d=>d.avail) : DOCTORS;
   return (
-    <div style={{ padding:"20px 16px 100px", animation:"rise 0.3s ease" }}>
+    <div style={{ padding:"20px 16px 100px" }}>
       <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>डाक्टरहरू</div>
       <div style={{ fontSize:13, color:C.textLight, marginBottom:16 }}>भिडियो परामर्श — घरैबाट</div>
-
       {booked && (
-        <div style={{
-          background:C.greenLight, border:`1.5px solid ${C.green}44`,
-          borderRadius:14, padding:"14px 16px", marginBottom:16,
-          animation:"rise 0.3s ease"
-        }}>
-          <div style={{ fontSize:14, fontWeight:700, color:C.green, marginBottom:4 }}>
-            ✅ अपोइन्टमेन्ट बुक भयो!
-          </div>
-          <div style={{ fontSize:12, color:"#065F46" }}>{booked.name} · {booked.wait}</div>
-          <button onClick={()=>setBooked(null)} style={{
-            marginTop:8, background:"none", border:`1px solid ${C.green}44`,
-            color:C.green, borderRadius:8, padding:"4px 12px",
-            fontSize:11, cursor:"pointer", fontFamily:"inherit"
-          }}>बन्द गर्नुहोस्</button>
+        <div style={{ background:C.successLight, border:`1px solid #9AE6B4`, borderRadius:14, padding:"14px 16px", marginBottom:16 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.success, marginBottom:2 }}>✅ अपोइन्टमेन्ट बुक भयो!</div>
+          <div style={{ fontSize:12, color:"#276749" }}>{booked.name} · {booked.wait}</div>
+          <button onClick={()=>setBooked(null)} style={{ marginTop:8, background:"none", border:`1px solid ${C.success}44`, color:C.success, borderRadius:8, padding:"4px 12px", fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>बन्द गर्नुहोस्</button>
         </div>
       )}
-
-      {DOCTORS.map((d,i)=>(
-        <Card key={i} style={{ marginBottom:12, opacity: d.avail ? 1 : 0.65 }}>
+      <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+        {[["all","सबै"],["available","उपलब्ध"]].map(([val,label])=>(
+          <button key={val} onClick={()=>setFilter(val)} style={{ background:filter===val?C.primary:C.white, color:filter===val?"#fff":C.textMid, border:`1px solid ${filter===val?C.primary:C.border}`, borderRadius:20, padding:"7px 18px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>{label}</button>
+        ))}
+      </div>
+      {filtered.map((d,i) => (
+        <div key={i} style={{ background:C.white, borderRadius:16, padding:16, marginBottom:12, border:`1px solid ${C.border}`, opacity:d.avail?1:0.65, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
           <div style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:12 }}>
-            <div style={{
-              width:52, height:52, borderRadius:14, background:C.tealLight,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:28, flexShrink:0
-            }}>{d.avatar}</div>
+            <Avatar initials={d.initials} color={d.color} size={52} />
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:15, fontWeight:700, color:C.text }}>{d.name}</div>
-              <div style={{ fontSize:12, color:C.textLight, marginTop:2 }}>{d.spec}</div>
-              <div style={{ display:"flex", gap:12, marginTop:5 }}>
-                <span style={{ fontSize:12, color:C.textMid }}>⭐ {d.rating}</span>
-                <span style={{ fontSize:12, color:C.textMid }}>{d.fee}</span>
+              <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:2 }}>{d.name}</div>
+              <div style={{ fontSize:12, color:C.textLight, marginBottom:6 }}>{d.spec} · {d.exp} अनुभव</div>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <StarRating rating={d.rating} />
+                <span style={{ fontSize:11, color:C.textLight }}>({d.reviews} समीक्षा)</span>
               </div>
             </div>
-            <Badge
-              color={d.avail ? C.green : C.textLight}
-              bg={d.avail ? C.greenLight : C.border}
-            >
-              {d.avail ? "उपलब्ध" : "व्यस्त"}
-            </Badge>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ background:d.avail?C.successLight:C.bg, color:d.avail?C.success:C.textLight, borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, marginBottom:6 }}>{d.avail?"उपलब्ध":"व्यस्त"}</div>
+              <div style={{ fontSize:11, color:C.textLight }}>⏱ {d.wait}</div>
+            </div>
           </div>
-
-          <div style={{
-            background:C.bg, borderRadius:10, padding:"8px 12px",
-            fontSize:12, color:C.textMid, marginBottom:12
-          }}>
-            ⏱ {d.wait}
+          <div style={{ background:C.bg, borderRadius:10, padding:"8px 12px", display:"flex", justifyContent:"space-between", marginBottom:12 }}>
+            <span style={{ fontSize:12, color:C.textMid }}>परामर्श शुल्क</span>
+            <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{d.fee}</span>
           </div>
-
           <div style={{ display:"flex", gap:8 }}>
-            <PrimaryBtn
-              onClick={()=>d.avail&&setBooked(d)}
-              disabled={!d.avail}
-              style={{ flex:1, padding:"10px" }}
-            >
-              📅 बुक गर्नुहोस्
-            </PrimaryBtn>
-            <button style={{
-              flex:1, background:C.purpleLight, color:C.purple,
-              border:"none", borderRadius:12, padding:"10px",
-              fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit"
-            }}>
-              👤 प्रोफाइल
-            </button>
+            <button onClick={()=>d.avail&&setBooked(d)} disabled={!d.avail} style={{ flex:2, background:d.avail?C.primary:C.border, color:"#fff", border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:700, cursor:d.avail?"pointer":"not-allowed", fontFamily:"inherit" }}>📅 अपोइन्टमेन्ट बुक गर्नुहोस्</button>
+            <button style={{ flex:1, background:C.primaryLight, color:C.primary, border:"none", borderRadius:10, padding:"11px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>प्रोफाइल</button>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );
 }
 
-// ─── Screen: TIPS ──────────────────────────────────────────────
 function TipsScreen() {
   const [saved, setSaved] = useState([]);
+  const tips = [
+    { icon:"💧", color:C.primary, bg:C.primaryLight, title:"पानी पिउनुहोस्", body:"दिनमा कम्तीमा ८ गिलास सफा पानी पिउनुहोस्।", tag:"दैनिक" },
+    { icon:"🥗", color:C.secondary, bg:C.secondaryLight, title:"सन्तुलित खाना", body:"दाल, भात, तरकारी र फलफूल नियमित खानुहोस्।", tag:"पोषण" },
+    { icon:"😴", color:C.purple, bg:C.purpleLight, title:"पर्याप्त निद्रा", body:"प्रतिदिन ७–८ घण्टा सुत्नुहोस्।", tag:"आराम" },
+    { icon:"🚶", color:C.accent, bg:C.accentLight, title:"हिँड्नुहोस्", body:"दिनमा कम्तीमा ३० मिनेट हिँड्नुहोस्।", tag:"व्यायाम" },
+    { icon:"🤲", color:C.secondary, bg:C.secondaryLight, title:"हात धुनुहोस्", body:"खाना अघि र शौचालय पछि साबुनले हात धुनुहोस्।", tag:"सरसफाई" },
+    { icon:"💉", color:C.primary, bg:C.primaryLight, title:"खोप लगाउनुहोस्", body:"नियमित खोप लगाएर रोगबाट बच्नुहोस्।", tag:"रोकथाम" },
+  ];
   return (
-    <div style={{ padding:"20px 16px 100px", animation:"rise 0.3s ease" }}>
+    <div style={{ padding:"20px 16px 100px" }}>
       <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>स्वास्थ्य सुझाव</div>
-      <div style={{ fontSize:13, color:C.textLight, marginBottom:16 }}>अफलाइनमा पनि उपलब्ध</div>
-
-      {TIPS.map((t,i)=>(
-        <Card key={i} style={{ marginBottom:10, display:"flex", gap:14, alignItems:"flex-start" }}>
-          <div style={{
-            width:46, height:46, borderRadius:12, background:C.tealLight,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:24, flexShrink:0
-          }}>{t.icon}</div>
+      <div style={{ fontSize:13, color:C.textLight, marginBottom:20 }}>राम्रो बानीहरू — अफलाइनमा पनि उपलब्ध</div>
+      {tips.map((t,i) => (
+        <div key={i} style={{ background:C.white, borderRadius:14, padding:14, marginBottom:10, border:`1px solid ${C.border}`, display:"flex", gap:12, alignItems:"flex-start", boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div style={{ width:46, height:46, borderRadius:12, background:t.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{t.icon}</div>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:3 }}>{t.title}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+              <span style={{ fontSize:14, fontWeight:700, color:C.text }}>{t.title}</span>
+              <span style={{ background:t.bg, color:t.color, borderRadius:4, padding:"1px 7px", fontSize:10, fontWeight:600 }}>{t.tag}</span>
+            </div>
             <div style={{ fontSize:13, color:C.textMid, lineHeight:1.6 }}>{t.body}</div>
           </div>
-          <button onClick={()=>setSaved(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{
-            background:"none", border:"none", cursor:"pointer",
-            fontSize:20, color: saved.includes(i) ? C.orange : C.textLight,
-            flexShrink:0, padding:"4px"
-          }}>
-            {saved.includes(i) ? "★" : "☆"}
-          </button>
-        </Card>
-      ))}
-
-      {/* Emergency contacts */}
-      <div style={{
-        background:C.redLight, border:`1.5px solid ${C.red}33`,
-        borderRadius:16, padding:"16px", marginTop:8
-      }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.red, marginBottom:12 }}>
-          🚨 आपतकालीन नम्बरहरू
+          <button onClick={()=>setSaved(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{ background:"none", border:"none", cursor:"pointer", fontSize:18, color:saved.includes(i)?C.warning:C.textLight, flexShrink:0 }}>{saved.includes(i)?"★":"☆"}</button>
         </div>
-        {[
-          ["एम्बुलेन्स","102"],
-          ["प्रहरी","100"],
-          ["अग्नि नियन्त्रण","101"],
-          ["स्वास्थ्य हेल्पलाइन","1800-01-1190"]
-        ].map(([l,n])=>(
-          <div key={l} style={{
-            display:"flex", justifyContent:"space-between", alignItems:"center",
-            padding:"8px 0", borderBottom:`1px solid ${C.red}22`
-          }}>
-            <span style={{ fontSize:13, color:"#991B1B" }}>{l}</span>
-            <span style={{ fontSize:18, fontWeight:800, color:C.red }}>{n}</span>
+      ))}
+      <div style={{ background:C.dangerLight, border:`1px solid #FEB2B2`, borderRadius:16, padding:16, marginTop:4 }}>
+        <div style={{ fontSize:14, fontWeight:700, color:C.danger, marginBottom:12 }}>🚨 आपतकालीन नम्बरहरू</div>
+        {[["एम्बुलेन्स","102"],["प्रहरी","100"],["अग्नि","101"],["हेल्पलाइन","1800-01-1190"]].map(([l,n])=>(
+          <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid #FED7D7` }}>
+            <span style={{ fontSize:13, color:"#C53030" }}>{l}</span>
+            <a href={`tel:${n}`} style={{ fontSize:18, fontWeight:800, color:C.danger, textDecoration:"none" }}>{n}</a>
           </div>
         ))}
       </div>
@@ -898,97 +623,53 @@ function TipsScreen() {
   );
 }
 
-// ─── ROOT ──────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("home");
   const [online, setOnline] = useState(navigator.onLine);
   const [pickedSymptom, setPickedSymptom] = useState(null);
   const [chatSeed, setChatSeed] = useState(null);
 
-  useEffect(()=>{
-    window.addEventListener("online", ()=>setOnline(true));
-    window.addEventListener("offline", ()=>setOnline(false));
-  },[]);
+  useEffect(() => {
+    window.addEventListener("online",  () => setOnline(true));
+    window.addEventListener("offline", () => setOnline(false));
+  }, []);
 
   return (
-    <div style={{
-      background:C.bg, minHeight:"100vh",
-      maxWidth:480, margin:"0 auto",
-      fontFamily:"'Noto Sans Devanagari', 'Segoe UI', system-ui, sans-serif",
-      position:"relative", color:C.text
-    }}>
+    <div style={{ background:C.bg, minHeight:"100vh", maxWidth:480, margin:"0 auto", position:"relative", fontFamily:"'Noto Sans Devanagari', 'Segoe UI', system-ui, sans-serif", color:C.text }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap');
-        @keyframes rise { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+        @keyframes typingDot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
         * { box-sizing:border-box; margin:0; padding:0; }
-        ::-webkit-scrollbar { width:3px; }
-        ::-webkit-scrollbar-thumb { background:${C.border}; border-radius:2px; }
+        ::-webkit-scrollbar { width:0; height:0; }
         input::placeholder,textarea::placeholder { color:${C.textLight}; }
-        button { outline:none; }
-        div::-webkit-scrollbar { height:3px; }
-        div::-webkit-scrollbar-thumb { background:${C.border}; border-radius:2px; }
+        button { outline:none; -webkit-tap-highlight-color:transparent; }
+        a { -webkit-tap-highlight-color:transparent; }
       `}</style>
 
-      {/* Top header */}
-      <div style={{
-        background:C.white, borderBottom:`1px solid ${C.border}`,
-        padding:"14px 16px", position:"sticky", top:0, zIndex:50,
-        display:"flex", justifyContent:"space-between", alignItems:"center",
-        boxShadow:"0 1px 8px rgba(0,0,0,0.06)"
-      }}>
+      <div style={{ background:C.white, padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}`, position:"sticky", top:0, zIndex:50, boxShadow:"0 1px 8px rgba(0,0,0,0.06)" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{
-            width:38, height:38, borderRadius:10,
-            background:C.tealLight,
-            display:"flex", alignItems:"center", justifyContent:"center", fontSize:20
-          }}>🏥</div>
+          <div style={{ width:34, height:34, borderRadius:9, background:C.primary, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
           <div>
-            <div style={{ fontSize:16, fontWeight:800, color:C.text, lineHeight:1 }}>
-              स्वास्थ्य सहायक
-            </div>
-            <div style={{ fontSize:10, color:C.textLight, marginTop:1, letterSpacing:0.3 }}>
-              Nepal AI Health Assistant
-            </div>
+            <div style={{ fontSize:15, fontWeight:800, color:C.text, lineHeight:1 }}>स्वास्थ्य सहायक</div>
+            <div style={{ fontSize:9, color:C.textLight, letterSpacing:0.3, marginTop:1 }}>Nepal AI Health Assistant</div>
           </div>
         </div>
-        <div style={{
-          display:"flex", alignItems:"center", gap:5,
-          background: online ? C.greenLight : C.orangeLight,
-          padding:"4px 10px", borderRadius:20
-        }}>
-          <div style={{
-            width:6, height:6, borderRadius:"50%",
-            background: online ? C.green : C.orange,
-            animation:"bounce 2s infinite"
-          }}/>
-          <span style={{ fontSize:10, fontWeight:600, color: online ? C.green : C.orange }}>
-            {online ? "Online" : "Offline"}
-          </span>
+        <div style={{ display:"flex", alignItems:"center", gap:5, background:online?C.successLight:C.warningLight, padding:"4px 10px", borderRadius:20 }}>
+          <div style={{ width:6, height:6, borderRadius:"50%", background:online?C.success:C.warning }}/>
+          <span style={{ fontSize:10, fontWeight:700, color:online?C.success:C.warning }}>{online?"Online":"Offline"}</span>
         </div>
       </div>
 
-      {/* Offline bar */}
-      {!online && (
-        <div style={{
-          background:C.orangeLight, padding:"8px 16px",
-          fontSize:12, color:C.orange, fontWeight:500,
-          borderBottom:`1px solid ${C.orange}33`
-        }}>
-          ⚠️ इन्टरनेट छैन — मूल सुविधाहरू उपलब्ध छन्
-        </div>
-      )}
+      {!online && <div style={{ background:C.warningLight, padding:"7px 16px", fontSize:12, color:C.warning, fontWeight:500, borderBottom:`1px solid #FBD38D` }}>⚠️ इन्टरनेट छैन — मूल सुविधाहरू उपलब्ध छन्</div>}
 
-      {/* Screens */}
-      <div style={{ height:`calc(100vh - ${online?57:85}px - 54px)`, overflowY:"auto" }}>
+      <div style={{ height:`calc(100vh - ${online?55:80}px - 54px)`, overflowY:"auto" }}>
         {tab==="home"    && <HomeScreen setTab={setTab} pickSymptom={setPickedSymptom} />}
         {tab==="check"   && <CheckScreen initialSymptom={pickedSymptom} setTab={setTab} setChatSeed={setChatSeed} />}
         {tab==="chat"    && <ChatScreen seed={chatSeed} setSeed={setChatSeed} online={online} />}
         {tab==="doctors" && <DoctorsScreen />}
         {tab==="tips"    && <TipsScreen />}
       </div>
-
-      <NavBar tab={tab} setTab={setTab} />
+      <BottomNav tab={tab} setTab={setTab} />
     </div>
   );
 }
