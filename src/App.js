@@ -10,6 +10,7 @@ import Av from "./components/Avatar";
 import Sh from "./components/SectionHeader";
 import MedicalDisclaimer from "./components/MedicalDisclaimer";
 import NavBar from "./components/NavBar";
+import Drawer from "./components/Drawer";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -41,7 +42,6 @@ import {
   ChevronRight,
   Star,
   Clock,
-  ClipboardList,
 } from "lucide-react";
 
 // ─── Small Components ──────────────────────────────────────────
@@ -156,72 +156,6 @@ function VoiceInput({ input, setInput, onSend, loading, lang }) {
         </button>
       </div>
     </div>
-  );
-}
-
-// ─── Drawer ───────────────────────────────────────────────────
-function Drawer({ open, onClose, setTab, user, onLogout, lang, onLangChange }) {
-  if (!open) return null;
-  const items = [
-    { icon: UserRound, label: lang === "en" ? "Profile" : "प्रोफाइल", tab: "profile" },
-    { icon: Bell, label: lang === "en" ? "Follow-up" : "फलो-अप", tab: "followup" },
-    { icon: ClipboardList, label: lang === "en" ? "Health History" : "स्वास्थ्य इतिहास", tab: "history" },
-  ];
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200 }} />
-      <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: 280, background: C.white, zIndex: 201, boxShadow: "4px 0 20px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
-        <div style={{ background: "linear-gradient(135deg,#1D4ED8,#2563EB)", padding: "32px 20px 20px", color: "#fff" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-            <UserRound size={25} color="#fff" />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>{user?.name || "User"}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{[user?.local_level, user?.district].filter(Boolean).join(", ") || "Nepal"}</div>
-          <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.16)", borderRadius: 999, padding: "4px 9px", fontSize: 10, fontWeight: 700 }}>
-            Beta User
-          </div>
-        </div>
-
-        <div style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
-          {items.map((it) => (
-            <button
-              key={it.tab}
-              onClick={() => {
-                setTab(it.tab);
-                onClose();
-              }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: C.text, textAlign: "left" }}
-            >
-              <it.icon size={20} color={C.primary} /> {it.label}
-            </button>
-          ))}
-
-          <div style={{ margin: "12px 16px", height: 1, background: C.border }} />
-          <div style={{ padding: "8px 20px" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.textLight, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
-              <Languages size={14} /> {lang === "en" ? "Language" : "भाषा"}
-            </div>
-            <div style={{ display: "flex", background: C.bg, borderRadius: 10, padding: 3, gap: 3 }}>
-              {[
-                ["en", "English"],
-                ["ne", "नेपाली"],
-              ].map(([l, label]) => (
-                <button key={l} onClick={() => onLangChange(l)} style={{ flex: 1, background: lang === l ? C.white : "transparent", color: lang === l ? C.primary : C.textLight, border: "none", borderRadius: 8, padding: "8px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.border}` }}>
-          <button onClick={onLogout} style={{ width: "100%", background: C.redLight, color: C.red, border: "1px solid #FECACA", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <LogOut size={16} /> {lang === "en" ? "Sign Out" : "साइन आउट"}
-          </button>
-        </div>
-      </div>
-    </>
   );
 }
 
