@@ -11,6 +11,7 @@ import Sh from "./components/SectionHeader";
 import MedicalDisclaimer from "./components/MedicalDisclaimer";
 import NavBar from "./components/NavBar";
 import Drawer from "./components/Drawer";
+import VoiceInput from "./components/VoiceInput";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -36,8 +37,6 @@ import {
   Languages,
   HeartPulse,
   CalendarDays,
-  Mic,
-  Send,
   ArrowLeft,
   ChevronRight,
   Star,
@@ -65,100 +64,6 @@ function IconTile({ Icon, label, onClick, bg, color }) {
     </button>
   );
 }
-
-// ─── Voice Input ───────────────────────────────────────────────
-function VoiceInput({ input, setInput, onSend, loading, lang }) {
-  const [on, setOn] = useState(false);
-  const ref = useRef(null);
-
-  function start() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      alert(lang === "en" ? "Voice input is not supported. Please use Chrome." : "Voice input support छैन। Chrome प्रयोग गर्नुहोस्।");
-      return;
-    }
-    const r = new SR();
-    r.lang = lang === "ne" ? "ne-NP" : "en-US";
-    r.interimResults = false;
-    r.maxAlternatives = 1;
-    ref.current = r;
-    r.onstart = () => setOn(true);
-    r.onend = () => setOn(false);
-    r.onerror = () => setOn(false);
-    r.onresult = (e) => setInput(e.results[0][0].transcript);
-    r.start();
-  }
-
-  function stop() {
-    ref.current?.stop();
-    setOn(false);
-  }
-
-  return (
-    <div>
-      {on && (
-        <div style={{ marginBottom: 8, padding: "8px 14px", background: C.primaryLight, borderRadius: 10, fontSize: 12, color: C.primary, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-          <Mic size={14} /> {lang === "ne" ? "सुनिरहेको छु..." : "Listening..."}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSend()}
-          placeholder={lang === "ne" ? "लक्षण बताउनुहोस्..." : "Describe your symptoms..."}
-          style={{
-            flex: 1,
-            border: `1.5px solid ${on ? C.primary : C.border}`,
-            borderRadius: 24,
-            padding: "11px 18px",
-            fontSize: 14,
-            fontFamily: "inherit",
-            color: C.text,
-            outline: "none",
-            background: C.bg,
-          }}
-        />
-        <button
-          onClick={on ? stop : start}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: "50%",
-            flexShrink: 0,
-            background: on ? "#FEE2E2" : C.primaryLight,
-            border: `2px solid ${on ? C.red : C.primary}`,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Mic size={20} color={on ? C.red : C.primary} />
-        </button>
-        <button
-          onClick={onSend}
-          disabled={loading || !input.trim()}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: "50%",
-            flexShrink: 0,
-            background: input.trim() && !loading ? C.primary : C.border,
-            border: "none",
-            cursor: loading || !input.trim() ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Send size={18} color="#fff" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Auth Screen ───────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
