@@ -5,6 +5,7 @@ import { SYMPTOMS } from "./data/symptomsData";
 import { DOCTORS } from "./data/doctorsData";
 import { FIRST_AID } from "./data/firstAidData";
 import { r2n, isRom } from "./utils/transliteration";
+import { askAI } from "./utils/aiAssistant";
 import {
   PROVINCES,
   DISTRICTS_BY_PROVINCE,
@@ -34,32 +35,6 @@ import {
   Clock,
   ClipboardList,
 } from "lucide-react";
-
-// ─── AI ────────────────────────────────────────────────────────
-async function askAI(text, history, lang) {
-  const conv = isRom(text) ? r2n(text) : null;
-  const msg = conv ? `${text} (meaning: ${conv})` : text;
-  const sys =
-    lang === "en"
-      ? "You are Swasthya Sahayak, a warm AI health assistant for Nepal. Be conversational and brief — 2-4 sentences max. For new symptoms, ask 1-2 clarifying questions first: how long, severity, age, fever, medicine, other symptoms. Once enough context is available, give practical guidance in paragraph form. Never diagnose. For emergencies say 'Call 102 now' first. Suggest a real doctor for serious or persistent symptoms."
-      : "तपाईं स्वास्थ्य सहायक हुनुहुन्छ — नेपालका मानिसहरूको लागि मित्रवत् AI स्वास्थ्य सहायक। कुराकानी शैलीमा संक्षिप्त जवाफ दिनुहोस् — अधिकतम २-४ वाक्य। नयाँ लक्षणमा पहिले १-२ प्रश्न सोध्नुहोस्: कति दिनदेखि, कत्तिको तीव्र, ज्वरो छ कि छैन, औषधि लिएको छ कि छैन, अरू लक्षण छन् कि छैनन्। पर्याप्त जानकारीपछि व्यवहारिक सल्लाह दिनुहोस्। पक्का निदान नगर्नुहोस्। आपतकालमा पहिले 'अहिले 102 मा फोन गर्नुहोस्' भन्नुहोस्।";
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.REACT_APP_OPENAI_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      max_tokens: 350,
-      messages: [{ role: "system", content: sys }, ...history, { role: "user", content: msg }],
-    }),
-  });
-
-  const d = await res.json();
-  return d.choices?.[0]?.message?.content || (lang === "en" ? "Sorry, try again." : "माफ गर्नुहोस्, पुनः प्रयास गर्नुहोस्।");
-}
 
 // ─── Small Components ──────────────────────────────────────────
 function Av({ init, color, size = 44 }) {
