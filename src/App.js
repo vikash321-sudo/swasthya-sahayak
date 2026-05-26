@@ -6,6 +6,7 @@ import { DOCTORS } from "./data/doctorsData";
 import { FIRST_AID } from "./data/firstAidData";
 import { r2n, isRom } from "./utils/transliteration";
 import { askAI } from "./utils/aiAssistant";
+import Av from "./components/Avatar";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -43,27 +44,6 @@ import {
 } from "lucide-react";
 
 // ─── Small Components ──────────────────────────────────────────
-function Av({ init, color, size = 44 }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: size * 0.35,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {init}
-    </div>
-  );
-}
 
 function Sh({ title, action, onAction }) {
   return (
