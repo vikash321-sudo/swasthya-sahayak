@@ -1227,91 +1227,950 @@ function FirstAidScreen({ lang }) {
   );
 }
 
-// ─── Symptom Check ─────────────────────────────────────────────
-function CheckScreen({ initSym, setTab, setChatSeed, lang }) {
-  const [q, setQ] = useState("");
-  const [sel, setSel] = useState(initSym ? [initSym] : []);
-  const [res, setRes] = useState(initSym ? [initSym] : null);
-  const [prev, setPrev] = useState("");
+// ─── SMART SYMPTOM TRIAGE ─────────────────────────────────────
+function symptomIdsFromText(text) {
+  const raw = text || "";
+  const lower = raw.toLowerCase();
 
-  useEffect(() => {
-    if (initSym) {
-      setSel([initSym]);
-      setRes([initSym]);
-    }
-  }, [initSym]);
+  return SYMPTOMS.filter(s => {
+    const englishMatch = lower.includes(s.en.toLowerCase());
+    const romanMatch = s.roman?.some(r => lower.includes(r));
+    const nepaliMatch = s.ne && raw.includes(s.ne.split(" ")[0]);
+    return englishMatch || romanMatch || nepaliMatch;
+  }).map(s => s.id);
+}
 
-  function search() {
-    const lo = q.toLowerCase();
-    const f = SYMPTOMS.filter((s) => sel.includes(s) || s.roman.some((r) => lo.includes(r)) || lo.includes(s.ne.slice(0, 2)) || lo.includes(s.en.toLowerCase()));
-    setRes(f.length ? f : []);
+function uniqueIds(ids) {
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function getRedFlagLabel(id, lang) {
+  const map = {
+    breathing: { en: "Breathing difficulty", ne: "सास फेर्न गाह्रो" },
+    chest: { en: "Chest pain", ne: "छाती दुखाई" },
+    unconscious: { en: "Fainting / unconscious", ne: "बेहोस हुनु" },
+    seizure: { en: "Seizure", ne: "थर्थराउने / दौरा" },
+    stiffneck: { en: "Stiff neck", ne: "घाँटी कडा हुनु" },
+    rash: { en: "Skin rash", ne: "छालामा दाग" },
+    blood: { en: "Blood in vomit/stool", ne: "उल्टी/दिसामा रगत" },
+    dehydration: { en: "Severe dehydration", ne: "गम्भीर निर्जलीकरण" }
+  };
+  return map[id]?.[lang] || id;
+}
+
+function buildSmartAssessment({ symptoms, duration, temperature, intensity, ageGroup, redFlags, lang }) {
+  const ids = symptoms.map(s => s.id);
+  const has = id => ids.includes(id);
+  const all = (...items) => items.every(id => ids.includes(id));
+
+  const temp = parseFloat(temperature);
+  const tempKnown = !Number.isNaN(temp);
+  const longDuration = duration === "3plus" || duration === "week";
+  const vulnerable = ageGroup === "child" || ageGroup === "elderly" || ageGroup === "pregnant";
+  const redSet = new Set(redFlags);
+
+  const t = lang === "en" ? {
+    highTitle: "Urgent care may be needed",
+    mediumTitle: "Needs attention",
+    lowTitle: "Mild for now",
+
+    highSummary: "Your symptom pattern includes warning signs. This is not a diagnosis, but it should not be ignored.",
+    mediumSummary: "Your symptoms may be due to a common illness, infection, dehydration, or another condition. More observation is needed.",
+    lowSummary: "Your symptoms look mild based on the information given, but keep monitoring them.",
+
+    combinedReason: "The symptoms together matter more than each symptom alone.",
+    feverHeadache: "Fever with headache can happen with viral fever, dehydration, dengue-like illness, typhoid-like illness, or other infections.",
+    feverCough: "Fever with cough can be related to flu, respiratory infection, COVID-like illness, or chest infection.",
+    feverStomach: "Fever with stomach pain or vomiting can be related to food poisoning, stomach infection, dehydration, or other infection.",
+    chestBreathing: "Chest pain with breathing difficulty is a red-flag combination and needs urgent medical attention.",
+    stomachVomiting: "Stomach pain with vomiting can quickly cause dehydration, especially in children and elderly people.",
+    headacheDizzy: "Headache with dizziness may be linked with dehydration, low blood pressure, weakness, stress, or other causes.",
+
+    doNow: "What to do now",
+    possible: "What this pattern may suggest",
+    doctorWhen: "When to see a doctor",
+    labConsider: "Possible lab discussion with doctor",
+    nextStep: "Recommended next step",
+
+    emergency: "Call 102 or go to the nearest emergency service now.",
+    restFluid: "Rest, drink enough water, and avoid heavy work for now.",
+    feverCare: "Check temperature every 4–6 hours and drink ORS/water frequently.",
+    avoidSelfMed: "Do not take antibiotics or strong medicine without a doctor.",
+    monitor: "Monitor symptoms for the next 24 hours.",
+
+    doctorHigh: "Go to a doctor or emergency service immediately.",
+    doctorMedium: "See a doctor if symptoms continue, worsen, or last more than 24–48 hours.",
+    doctorFever: "See a doctor if fever lasts 3 days, goes above 39°C, or comes with rash, severe headache, vomiting, or weakness.",
+    doctorLow: "See a doctor if symptoms worsen or new symptoms appear.",
+
+    labFever: "If fever continues for 3+ days, ask a doctor about CBC, dengue, malaria, typhoid, or urine tests depending on symptoms.",
+    labStomach: "If vomiting/diarrhea continues, a doctor may suggest stool/urine tests and dehydration assessment.",
+
+    notDiagnosis: "This is basic guidance, not a final diagnosis."
+  } : {
+    highTitle: "तत्काल उपचार आवश्यक हुन सक्छ",
+    mediumTitle: "ध्यान दिनुपर्ने अवस्था",
+    lowTitle: "हाल सामान्य देखिन्छ",
+
+    highSummary: "तपाईंको लक्षणमा चेतावनी संकेत देखिएको छ। यो पक्का निदान होइन, तर बेवास्ता गर्नु हुँदैन।",
+    mediumSummary: "यी लक्षण सामान्य संक्रमण, डिहाइड्रेसन, वा अन्य कारणले हुन सक्छन्। अझै निगरानी आवश्यक छ।",
+    lowSummary: "दिएको जानकारी अनुसार हाल लक्षण सामान्य देखिन्छ, तर निगरानी गरिरहनुहोस्।",
+
+    combinedReason: "लक्षणहरूलाई छुट्टाछुट्टै होइन, सँगै हेर्नु महत्त्वपूर्ण हुन्छ।",
+    feverHeadache: "ज्वरो र टाउको दुखाई सँगै हुँदा भाइरल ज्वरो, डिहाइड्रेसन, डेंगी-जस्तो समस्या, टाइफाइड-जस्तो समस्या वा अन्य संक्रमण हुन सक्छ।",
+    feverCough: "ज्वरो र खोकी सँगै हुँदा फ्लु, श्वासप्रश्वास संक्रमण, COVID-जस्तो समस्या वा छातीको संक्रमणसँग सम्बन्धित हुन सक्छ।",
+    feverStomach: "ज्वरोसँग पेट दुख्ने वा उल्टी भए फूड पोइजनिङ, पेटको संक्रमण, डिहाइड्रेसन वा अन्य संक्रमण हुन सक्छ।",
+    chestBreathing: "छाती दुखाई र सास फेर्न गाह्रो हुनु आपतकालीन संकेत हो। तुरुन्त उपचार आवश्यक हुन्छ।",
+    stomachVomiting: "पेट दुखाई र उल्टीले छिट्टै डिहाइड्रेसन गराउन सक्छ, विशेषगरी बच्चा र वृद्धमा।",
+    headacheDizzy: "टाउको दुखाई र चक्कर डिहाइड्रेसन, कम रक्तचाप, कमजोरी, तनाव वा अन्य कारणसँग सम्बन्धित हुन सक्छ।",
+
+    doNow: "अहिले के गर्ने",
+    possible: "यो लक्षण ढाँचाले के संकेत गर्न सक्छ",
+    doctorWhen: "डाक्टर कहिले देखाउने",
+    labConsider: "डाक्टरसँग छलफल गर्न सकिने परीक्षण",
+    nextStep: "सुझाव गरिएको अर्को कदम",
+
+    emergency: "तुरुन्त 102 मा फोन गर्नुहोस् वा नजिकको emergency मा जानुहोस्।",
+    restFluid: "आराम गर्नुहोस्, पर्याप्त पानी पिउनुहोस्, र अहिले भारी काम नगर्नुहोस्।",
+    feverCare: "हरेक ४–६ घण्टामा तापक्रम जाँच्नुहोस् र ORS/पानी बारम्बार पिउनुहोस्।",
+    avoidSelfMed: "डाक्टरको सल्लाह बिना antibiotics वा कडा औषधि नखानुहोस्।",
+    monitor: "अर्को २४ घण्टा लक्षण निगरानी गर्नुहोस्।",
+
+    doctorHigh: "तुरुन्त डाक्टर वा emergency सेवा लिनुहोस्।",
+    doctorMedium: "लक्षण जारी रहे, बढे, वा २४–४८ घण्टा भन्दा बढी रहे डाक्टर देखाउनुहोस्।",
+    doctorFever: "ज्वरो ३ दिनभन्दा बढी रहे, ३९°C भन्दा माथि गए, वा दाग/तीव्र टाउको दुखाई/उल्टी/कमजोरी आए डाक्टर देखाउनुहोस्।",
+    doctorLow: "लक्षण बढे वा नयाँ लक्षण देखिए डाक्टर देखाउनुहोस्।",
+
+    labFever: "ज्वरो ३+ दिन रहे डाक्टरसँग CBC, dengue, malaria, typhoid वा urine test बारे सोध्न सकिन्छ।",
+    labStomach: "उल्टी/झाडापखाला जारी रहे stool/urine test र dehydration जाँच आवश्यक हुन सक्छ।",
+
+    notDiagnosis: "यो सामान्य मार्गदर्शन हो, पक्का निदान होइन।"
+  };
+
+  let level = "low";
+
+  if (
+    has("chest") ||
+    has("breathing") ||
+    redSet.has("breathing") ||
+    redSet.has("chest") ||
+    redSet.has("unconscious") ||
+    redSet.has("seizure") ||
+    redSet.has("blood") ||
+    (tempKnown && temp >= 40) ||
+    intensity === "severe"
+  ) {
+    level = "high";
+  } else if (
+    longDuration ||
+    vulnerable ||
+    (tempKnown && temp >= 38.5) ||
+    symptoms.length >= 3 ||
+    intensity === "moderate" ||
+    redFlags.length > 0
+  ) {
+    level = "medium";
   }
 
-  const worst = res?.reduce((w, s) => {
-    const o = { low: 0, medium: 1, high: 2 };
-    return o[s.sev] > o[w] ? s.sev : w;
-  }, "low");
+  const reasons = [];
 
-  return (
-    <div style={{ padding: "20px 16px 100px" }}>
-      <div style={{ fontSize: 22, fontWeight: 900, color: C.text, marginBottom: 4 }}>{lang === "en" ? "Symptom Check" : "लक्षण जाँच"}</div>
-      <div style={{ fontSize: 13, color: C.textLight, marginBottom: 20 }}>{lang === "en" ? "Type in English, Nepali, or Roman Nepali" : "English, नेपाली, वा Roman मा टाइप गर्नुहोस्"}</div>
-      <MedicalDisclaimer lang={lang} compact />
+  if (all("chest", "breathing")) reasons.push(t.chestBreathing);
+  if (all("fever", "headache")) reasons.push(t.feverHeadache);
+  if (all("fever", "cough")) reasons.push(t.feverCough);
+  if (has("fever") && (has("stomach") || has("vomiting"))) reasons.push(t.feverStomach);
+  if (all("stomach", "vomiting")) reasons.push(t.stomachVomiting);
+  if (all("headache", "dizzy")) reasons.push(t.headacheDizzy);
 
-      <div style={{ background: C.white, borderRadius: 16, padding: 16, border: `1px solid ${C.border}`, marginBottom: 16, boxShadow: C.shadow }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", background: C.bg, marginBottom: 10 }}>
-          <Search size={16} color={C.textLight} style={{ marginTop: 4 }} />
-          <textarea value={q} onChange={(e) => { setQ(e.target.value); setRes(null); setPrev(r2n(e.target.value) || ""); }} placeholder={lang === "en" ? "headache and fever for 2 days..." : "tauko dukhxa, jworo..."} rows={2} style={{ flex: 1, border: "none", background: "none", outline: "none", fontSize: 14, fontFamily: "inherit", color: C.text, resize: "none", lineHeight: 1.6 }} />
-        </div>
-        {prev && <div style={{ padding: "7px 12px", background: C.primaryLight, borderRadius: 8, fontSize: 13, color: C.primary, fontWeight: 700, marginBottom: 10 }}>✓ {lang === "en" ? "Understood" : "बुझियो"}: {prev}</div>}
-        <button onClick={search} style={{ width: "100%", background: C.primary, color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{lang === "en" ? "Check Symptoms" : "जाँच गर्नुहोस्"}</button>
+  if (reasons.length === 0) {
+    const possible = Array.from(
+      new Set(symptoms.flatMap(s => lang === "en" ? s.causesEn : s.causesNe))
+    ).slice(0, 4);
+
+    if (possible.length) {
+      reasons.push(
+        lang === "en"
+          ? `This may be related to ${possible.join(", ")} or another common condition.`
+          : `यो ${possible.join(", ")} वा अन्य सामान्य अवस्थासँग सम्बन्धित हुन सक्छ।`
+      );
+    } else {
+      reasons.push(t.combinedReason);
+    }
+  }
+
+  const actions = [];
+
+  if (level === "high") {
+    actions.push(t.emergency);
+    actions.push(lang === "en" ? "Do not wait for symptoms to become worse." : "लक्षण अझै खराब होस् भनेर प्रतीक्षा नगर्नुहोस्।");
+    actions.push(lang === "en" ? "Keep the person sitting or lying safely while arranging help." : "मद्दतको व्यवस्था गर्दा व्यक्तिलाई सुरक्षित रूपमा बसाउनु वा सुताउनुहोस्।");
+  } else {
+    actions.push(t.restFluid);
+    if (has("fever") || tempKnown) actions.push(t.feverCare);
+    actions.push(t.avoidSelfMed);
+    actions.push(t.monitor);
+  }
+
+  const doctor = [];
+
+  if (level === "high") {
+    doctor.push(t.doctorHigh);
+  } else if (level === "medium") {
+    doctor.push(t.doctorMedium);
+    if (has("fever")) doctor.push(t.doctorFever);
+  } else {
+    doctor.push(t.doctorLow);
+  }
+
+  const lab = [];
+
+  if (has("fever") && (longDuration || (tempKnown && temp >= 38.5))) {
+    lab.push(t.labFever);
+  }
+
+  if (has("stomach") || has("vomiting")) {
+    lab.push(t.labStomach);
+  }
+
+  const meta = {
+    high: {
+      title: t.highTitle,
+      summary: t.highSummary,
+      bg: C.redLight,
+      color: C.red,
+      icon: "🚨"
+    },
+    medium: {
+      title: t.mediumTitle,
+      summary: t.mediumSummary,
+      bg: C.orangeLight,
+      color: C.orange,
+      icon: "⚠️"
+    },
+    low: {
+      title: t.lowTitle,
+      summary: t.lowSummary,
+      bg: C.greenLight,
+      color: C.green,
+      icon: "✅"
+    }
+  }[level];
+
+  return {
+    level,
+    meta,
+    symptoms,
+    duration,
+    temperature,
+    intensity,
+    ageGroup,
+    redFlags,
+    reasons,
+    actions,
+    doctor,
+    lab,
+    notDiagnosis: t.notDiagnosis,
+    labels: {
+      possible: t.possible,
+      doNow: t.doNow,
+      doctorWhen: t.doctorWhen,
+      labConsider: t.labConsider,
+      nextStep: t.nextStep
+    }
+  };
+}
+
+// ─── CHECK ─────────────────────────────────────────────────────
+function CheckScreen({initSym,setTab,setChatSeed,lang}){
+  const [q,setQ]=useState("");
+  const [selectedIds,setSelectedIds]=useState(initSym?.id ? [initSym.id] : []);
+  const [duration,setDuration]=useState("");
+  const [temperature,setTemperature]=useState("");
+  const [intensity,setIntensity]=useState("");
+  const [ageGroup,setAgeGroup]=useState("");
+  const [redFlags,setRedFlags]=useState([]);
+  const [assessment,setAssessment]=useState(null);
+  const [error,setError]=useState("");
+  const [prev,setPrev]=useState("");
+
+  useEffect(()=>{
+    if(initSym?.id){
+      setSelectedIds([initSym.id]);
+      setAssessment(null);
+      setError("");
+    }
+  },[initSym]);
+
+  const selectedSymptoms = selectedIds
+    .map(id => SYMPTOMS.find(s => s.id === id))
+    .filter(Boolean);
+
+  const durationOptions = [
+    {id:"today", en:"Today", ne:"आज मात्रै"},
+    {id:"1to2", en:"1–2 days", ne:"१–२ दिन"},
+    {id:"3plus", en:"3+ days", ne:"३+ दिन"},
+    {id:"week", en:"1 week+", ne:"१ हप्ता+"}
+  ];
+
+  const intensityOptions = [
+    {id:"mild", en:"Mild", ne:"हल्का"},
+    {id:"moderate", en:"Moderate", ne:"मध्यम"},
+    {id:"severe", en:"Severe", ne:"धेरै गाह्रो"}
+  ];
+
+  const ageOptions = [
+    {id:"child", en:"Child", ne:"बच्चा"},
+    {id:"adult", en:"Adult", ne:"वयस्क"},
+    {id:"elderly", en:"Elderly", ne:"वृद्ध"},
+    {id:"pregnant", en:"Pregnant", ne:"गर्भवती"}
+  ];
+
+  const redFlagOptions = [
+    {id:"breathing", en:"Breathing difficulty", ne:"सास फेर्न गाह्रो"},
+    {id:"chest", en:"Chest pain", ne:"छाती दुखाई"},
+    {id:"unconscious", en:"Fainting / unconscious", ne:"बेहोस हुनु"},
+    {id:"seizure", en:"Seizure", ne:"दौरा / थर्थराउनु"},
+    {id:"stiffneck", en:"Stiff neck", ne:"घाँटी कडा हुनु"},
+    {id:"rash", en:"Skin rash", ne:"छालामा दाग"},
+    {id:"blood", en:"Blood in vomit/stool", ne:"उल्टी/दिसामा रगत"},
+    {id:"dehydration", en:"Severe dehydration", ne:"गम्भीर डिहाइड्रेसन"}
+  ];
+
+  function handleText(value){
+    setQ(value);
+    setAssessment(null);
+    setError("");
+    setPrev(r2n(value)||"");
+  }
+
+  function toggleSymptom(id){
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev,id]);
+    setAssessment(null);
+    setError("");
+  }
+
+  function toggleRedFlag(id){
+    setRedFlags(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev,id]);
+    setAssessment(null);
+  }
+
+  function runAssessment(){
+    const idsFromText = symptomIdsFromText(q);
+    const ids = uniqueIds([...selectedIds, ...idsFromText]);
+
+    if(ids.length === 0){
+      setError(lang==="en"
+        ? "Please type or select at least one symptom."
+        : "कृपया कम्तीमा एउटा लक्षण टाइप वा छनोट गर्नुहोस्।"
+      );
+      return;
+    }
+
+    const symptoms = ids
+      .map(id => SYMPTOMS.find(s => s.id === id))
+      .filter(Boolean);
+
+    setSelectedIds(ids);
+
+    const result = buildSmartAssessment({
+      symptoms,
+      duration,
+      temperature,
+      intensity,
+      ageGroup,
+      redFlags,
+      lang
+    });
+
+    setAssessment(result);
+    setError("");
+  }
+
+  function sendToAI(){
+    if(!assessment) return;
+
+    const symptomNames = assessment.symptoms.map(s => lang==="en" ? s.en : s.ne).join(", ");
+    const flagText = assessment.redFlags.length
+      ? assessment.redFlags.map(id => getRedFlagLabel(id,lang)).join(", ")
+      : (lang==="en" ? "none reported" : "छैन");
+
+    const seed = lang==="en"
+      ? `I have these symptoms: ${symptomNames}. Duration: ${duration || "not sure"}. Temperature: ${temperature || "not measured"}. Severity: ${intensity || "not selected"}. Age group: ${ageGroup || "not selected"}. Warning signs: ${flagText}. Please ask me follow-up questions if needed and guide me safely.`
+      : `मलाई यी लक्षण छन्: ${symptomNames}। अवधि: ${duration || "थाहा छैन"}। तापक्रम: ${temperature || "नापिएको छैन"}। गम्भीरता: ${intensity || "छानिएको छैन"}। उमेर समूह: ${ageGroup || "छानिएको छैन"}। चेतावनी संकेत: ${flagText}। आवश्यक भए थप प्रश्न सोधेर सुरक्षित सल्लाह दिनुहोस्।`;
+
+    setChatSeed(seed);
+    setTab("chat");
+  }
+
+  return(
+    <div style={{padding:"20px 16px 100px"}}>
+      <div style={{fontSize:22,fontWeight:800,color:C.text,marginBottom:4}}>
+        {lang==="en"?"Smart Symptom Check":"स्मार्ट लक्षण जाँच"}
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: C.textLight, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>{lang === "en" ? "Or select" : "वा छान्नुहोस्"}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {SYMPTOMS.map((s) => {
-            const on = sel.includes(s);
-            return <button key={s.id} onClick={() => { setSel((p) => on ? p.filter((x) => x !== s) : [...p, s]); setRes(null); }} style={{ background: on ? C.primary : C.white, color: on ? "#fff" : C.textMid, border: `1.5px solid ${on ? C.primary : C.border}`, borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>{s.icon} {lang === "en" ? s.en : s.ne}</button>;
+      <div style={{fontSize:13,color:C.textLight,marginBottom:14,lineHeight:1.5}}>
+        {lang==="en"
+          ? "Select multiple symptoms and add basic details. The app will assess them together, not separately."
+          : "धेरै लक्षण छानेर विवरण थप्नुहोस्। App ले लक्षणहरू छुट्टाछुट्टै होइन, सँगै विश्लेषण गर्छ।"}
+      </div>
+
+      <div style={{
+        background:C.primaryLight,
+        border:"1px solid #BFDBFE",
+        borderRadius:12,
+        padding:"10px 12px",
+        fontSize:12,
+        color:C.primaryDark,
+        lineHeight:1.55,
+        marginBottom:14
+      }}>
+        ℹ️ {lang==="en"
+          ? "This is basic triage guidance, not a diagnosis. For emergencies, call 102 immediately."
+          : "यो सामान्य triage मार्गदर्शन हो, पक्का निदान होइन। आपतकालमा तुरुन्त 102 मा फोन गर्नुहोस्।"}
+      </div>
+
+      <div style={{
+        background:C.white,
+        borderRadius:16,
+        padding:16,
+        border:"1px solid "+C.border,
+        marginBottom:16,
+        boxShadow:C.shadow
+      }}>
+        <div style={{
+          display:"flex",
+          alignItems:"flex-start",
+          gap:10,
+          border:"1.5px solid "+C.border,
+          borderRadius:12,
+          padding:"10px 14px",
+          background:C.bg,
+          marginBottom:10
+        }}>
+          <span style={{color:C.textLight,marginTop:3}}>🔍</span>
+          <textarea
+            value={q}
+            onChange={e=>handleText(e.target.value)}
+            placeholder={lang==="en"
+              ? "Example: fever, headache and body pain for 2 days..."
+              : "उदाहरण: jworo, tauko dukhxa, body pain 2 din dekhi..."
+            }
+            rows={2}
+            style={{
+              flex:1,
+              border:"none",
+              background:"none",
+              outline:"none",
+              fontSize:14,
+              fontFamily:"inherit",
+              color:C.text,
+              resize:"none",
+              lineHeight:1.6
+            }}
+          />
+        </div>
+
+        {prev && (
+          <div style={{
+            padding:"7px 12px",
+            background:C.primaryLight,
+            borderRadius:8,
+            fontSize:13,
+            color:C.primary,
+            fontWeight:600,
+            marginBottom:10
+          }}>
+            ✓ {lang==="en"?"Understood":"बुझियो"}: {prev}
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            background:C.redLight,
+            border:"1px solid #FECACA",
+            borderRadius:10,
+            padding:"9px 12px",
+            marginBottom:10,
+            color:C.red,
+            fontSize:13,
+            fontWeight:600
+          }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div style={{marginBottom:18}}>
+        <div style={{
+          fontSize:12,
+          fontWeight:700,
+          color:C.textLight,
+          textTransform:"uppercase",
+          letterSpacing:0.5,
+          marginBottom:10
+        }}>
+          {lang==="en"?"Select symptoms":"लक्षण छान्नुहोस्"}
+        </div>
+
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+          {SYMPTOMS.map(s=>{
+            const on = selectedIds.includes(s.id);
+            return (
+              <button
+                key={s.id}
+                onClick={()=>toggleSymptom(s.id)}
+                style={{
+                  background:on?C.primary:C.white,
+                  color:on?"#fff":C.textMid,
+                  border:"1.5px solid "+(on?C.primary:C.border),
+                  borderRadius:20,
+                  padding:"8px 14px",
+                  fontSize:13,
+                  fontWeight:600,
+                  cursor:"pointer",
+                  fontFamily:"inherit",
+                  display:"flex",
+                  alignItems:"center",
+                  gap:6,
+                  boxShadow:on?"0 3px 8px rgba(37,99,235,0.18)":"none"
+                }}
+              >
+                <span>{s.icon}</span>
+                {lang==="en"?s.en:s.ne}
+              </button>
+            );
           })}
         </div>
       </div>
 
-      {sel.length > 0 && !res && <button onClick={() => setRes(sel)} style={{ width: "100%", background: C.primary, color: "#fff", border: "none", borderRadius: 12, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>{sel.length} {lang === "en" ? "symptom(s) — check now" : "वटा लक्षण जाँच गर्नुहोस्"}</button>}
-
-      {res !== null && (res.length === 0 ? (
-        <div style={{ background: C.white, borderRadius: 14, padding: 28, textAlign: "center", border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 4 }}>{lang === "en" ? "Symptom not found" : "लक्षण भेटिएन"}</div>
-          <div style={{ fontSize: 13, color: C.textLight }}>{lang === "en" ? "Try chatting with the AI assistant." : "AI सहायकसँग कुरा गर्नुहोस्।"}</div>
+      <div style={{
+        background:C.white,
+        border:"1px solid "+C.border,
+        borderRadius:16,
+        padding:16,
+        marginBottom:16,
+        boxShadow:C.shadow
+      }}>
+        <div style={{fontSize:15,fontWeight:800,color:C.text,marginBottom:12}}>
+          {lang==="en"?"Add details for better result":"राम्रो नतिजाको लागि विवरण थप्नुहोस्"}
         </div>
-      ) : (
-        <>
-          <div style={{ background: worst === "high" ? C.redLight : worst === "medium" ? C.orangeLight : C.greenLight, borderRadius: 12, padding: "12px 16px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <Info size={23} color={worst === "high" ? C.red : worst === "medium" ? C.orange : C.green} />
-            <div><SevBadge s={worst} lang={lang} /><div style={{ fontSize: 11, color: C.textMid, marginTop: 3 }}>{res.length} {lang === "en" ? "symptom(s) analyzed" : "वटा लक्षण विश्लेषण गरियो"}</div></div>
-          </div>
-          {res.map((s) => (
-            <div key={s.id} style={{ background: C.white, borderRadius: 14, padding: 16, marginBottom: 12, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{s.icon}</div>
-                  <div><div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{lang === "en" ? s.en : s.ne}</div><div style={{ fontSize: 11, color: C.textLight }}>{lang === "en" ? s.ne : s.en}</div></div>
-                </div>
-                <SevBadge s={s.sev} lang={lang} />
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: C.textLight, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{lang === "en" ? "Possible causes" : "सम्भावित कारण"}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{(lang === "en" ? s.causesEn : s.causesNe).map((c) => <span key={c} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 10px", fontSize: 11, color: C.textMid }}>{c}</span>)}</div>
-              </div>
-              <div style={{ background: C.primaryLight, borderLeft: `3px solid ${C.primary}`, borderRadius: "0 10px 10px 0", padding: "10px 14px", fontSize: 13, color: "#1E40AF", lineHeight: 1.7, marginBottom: 8 }}>{lang === "en" ? s.advEn : s.advNe}</div>
-              {s.sev !== "low" && <div style={{ background: s.sev === "high" ? C.redLight : C.orangeLight, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: s.sev === "high" ? C.red : C.orange, fontWeight: 600 }}>⚠️ {lang === "en" ? s.warnEn : s.warnNe}</div>}
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:C.textMid,marginBottom:6}}>
+              {lang==="en"?"How long?":"कति समयदेखि?"}
             </div>
-          ))}
-          <button onClick={() => { setChatSeed(lang === "en" ? `I have: ${res.map((s) => s.en).join(", ")}. What should I do?` : `मलाई: ${res.map((s) => s.ne).join(", ")}। के गर्नु पर्छ?`); setTab("chat"); }} style={{ width: "100%", background: C.white, color: C.primary, border: `1.5px solid ${C.primary}`, borderRadius: 12, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <MessageCircle size={16} /> {lang === "en" ? "Ask AI Assistant" : "AI सहायकसँग सोध्नुहोस्"}
-          </button>
-        </>
-      ))}
+            <select
+              value={duration}
+              onChange={e=>{setDuration(e.target.value);setAssessment(null);}}
+              style={{
+                width:"100%",
+                border:"1.5px solid "+C.border,
+                borderRadius:10,
+                padding:"10px",
+                fontSize:13,
+                fontFamily:"inherit",
+                background:C.bg,
+                color:duration?C.text:C.textLight,
+                outline:"none"
+              }}
+            >
+              <option value="">{lang==="en"?"Select":"छान्नुहोस्"}</option>
+              {durationOptions.map(o=><option key={o.id} value={o.id}>{lang==="en"?o.en:o.ne}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:C.textMid,marginBottom:6}}>
+              {lang==="en"?"Temperature":"तापक्रम"}
+            </div>
+            <input
+              value={temperature}
+              onChange={e=>{setTemperature(e.target.value);setAssessment(null);}}
+              placeholder="37.5°C"
+              style={{
+                width:"100%",
+                border:"1.5px solid "+C.border,
+                borderRadius:10,
+                padding:"10px",
+                fontSize:13,
+                fontFamily:"inherit",
+                background:C.bg,
+                color:C.text,
+                outline:"none",
+                boxSizing:"border-box"
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:C.textMid,marginBottom:6}}>
+              {lang==="en"?"How severe?":"कत्तिको गाह्रो?"}
+            </div>
+            <select
+              value={intensity}
+              onChange={e=>{setIntensity(e.target.value);setAssessment(null);}}
+              style={{
+                width:"100%",
+                border:"1.5px solid "+C.border,
+                borderRadius:10,
+                padding:"10px",
+                fontSize:13,
+                fontFamily:"inherit",
+                background:C.bg,
+                color:intensity?C.text:C.textLight,
+                outline:"none"
+              }}
+            >
+              <option value="">{lang==="en"?"Select":"छान्नुहोस्"}</option>
+              {intensityOptions.map(o=><option key={o.id} value={o.id}>{lang==="en"?o.en:o.ne}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:C.textMid,marginBottom:6}}>
+              {lang==="en"?"Patient group":"बिरामी समूह"}
+            </div>
+            <select
+              value={ageGroup}
+              onChange={e=>{setAgeGroup(e.target.value);setAssessment(null);}}
+              style={{
+                width:"100%",
+                border:"1.5px solid "+C.border,
+                borderRadius:10,
+                padding:"10px",
+                fontSize:13,
+                fontFamily:"inherit",
+                background:C.bg,
+                color:ageGroup?C.text:C.textLight,
+                outline:"none"
+              }}
+            >
+              <option value="">{lang==="en"?"Select":"छान्नुहोस्"}</option>
+              {ageOptions.map(o=><option key={o.id} value={o.id}>{lang==="en"?o.en:o.ne}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div style={{fontSize:12,fontWeight:600,color:C.textMid,marginBottom:8}}>
+            {lang==="en"?"Any warning signs?":"चेतावनी संकेत छन्?"}
+          </div>
+
+          <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+            {redFlagOptions.map(r=>{
+              const on = redFlags.includes(r.id);
+              return (
+                <button
+                  key={r.id}
+                  onClick={()=>toggleRedFlag(r.id)}
+                  style={{
+                    background:on?C.redLight:C.bg,
+                    color:on?C.red:C.textMid,
+                    border:"1.5px solid "+(on?"#FCA5A5":C.border),
+                    borderRadius:18,
+                    padding:"7px 11px",
+                    fontSize:12,
+                    fontWeight:600,
+                    cursor:"pointer",
+                    fontFamily:"inherit"
+                  }}
+                >
+                  {on ? "✓ " : ""}{lang==="en"?r.en:r.ne}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={runAssessment}
+        style={{
+          width:"100%",
+          background:C.primary,
+          color:"#fff",
+          border:"none",
+          borderRadius:14,
+          padding:"14px",
+          fontSize:15,
+          fontWeight:800,
+          cursor:"pointer",
+          fontFamily:"inherit",
+          marginBottom:18,
+          boxShadow:"0 8px 18px rgba(37,99,235,0.22)"
+        }}
+      >
+        {assessment
+          ? (lang==="en" ? "Update Analysis" : "विश्लेषण अपडेट गर्नुहोस्")
+          : (lang==="en" ? "Analyze Symptoms Together" : "लक्षणहरू सँगै विश्लेषण गर्नुहोस्")}
+      </button>
+
+      {assessment && (
+        <div>
+          <div style={{
+            background:assessment.meta.bg,
+            border:"1px solid "+assessment.meta.color+"33",
+            borderRadius:16,
+            padding:16,
+            marginBottom:14,
+            boxShadow:C.shadow
+          }}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+              <div style={{
+                width:44,
+                height:44,
+                borderRadius:12,
+                background:"#fff",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                fontSize:22,
+                flexShrink:0
+              }}>
+                {assessment.meta.icon}
+              </div>
+
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}>
+                  <span style={{fontSize:17,fontWeight:800,color:assessment.meta.color}}>
+                    {assessment.meta.title}
+                  </span>
+                  <span style={{
+                    background:"#fff",
+                    border:"1px solid "+assessment.meta.color+"33",
+                    color:assessment.meta.color,
+                    borderRadius:20,
+                    padding:"3px 9px",
+                    fontSize:11,
+                    fontWeight:700
+                  }}>
+                    {assessment.level.toUpperCase()}
+                  </span>
+                </div>
+
+                <div style={{fontSize:13,color:C.text,lineHeight:1.65}}>
+                  {assessment.meta.summary}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            background:C.white,
+            border:"1px solid "+C.border,
+            borderRadius:16,
+            padding:16,
+            marginBottom:12,
+            boxShadow:C.shadow
+          }}>
+            <div style={{fontSize:12,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>
+              {lang==="en"?"Selected case":"छानिएको अवस्था"}
+            </div>
+
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+              {assessment.symptoms.map(s=>(
+                <span key={s.id} style={{
+                  background:C.primaryLight,
+                  color:C.primary,
+                  borderRadius:18,
+                  padding:"6px 10px",
+                  fontSize:12,
+                  fontWeight:700
+                }}>
+                  {s.icon} {lang==="en"?s.en:s.ne}
+                </span>
+              ))}
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[
+                [lang==="en"?"Duration":"अवधि", duration || "—"],
+                [lang==="en"?"Temperature":"तापक्रम", temperature ? temperature+"°C" : "—"],
+                [lang==="en"?"Severity":"गम्भीरता", intensity || "—"],
+                [lang==="en"?"Group":"समूह", ageGroup || "—"]
+              ].map(([label,value])=>(
+                <div key={label} style={{background:C.bg,borderRadius:10,padding:"8px 10px"}}>
+                  <div style={{fontSize:10,color:C.textLight,marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.text}}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{
+            background:C.white,
+            border:"1px solid "+C.border,
+            borderRadius:16,
+            padding:16,
+            marginBottom:12,
+            boxShadow:C.shadow
+          }}>
+            <div style={{fontSize:15,fontWeight:800,color:C.text,marginBottom:10}}>
+              {assessment.labels.possible}
+            </div>
+
+            {assessment.reasons.map((r,i)=>(
+              <div key={i} style={{
+                display:"flex",
+                gap:10,
+                alignItems:"flex-start",
+                paddingBottom:i<assessment.reasons.length-1?10:0,
+                marginBottom:i<assessment.reasons.length-1?10:0,
+                borderBottom:i<assessment.reasons.length-1?"1px solid "+C.border:"none"
+              }}>
+                <span style={{color:C.primary,fontWeight:800,marginTop:1}}>•</span>
+                <span style={{fontSize:13,color:C.text,lineHeight:1.65}}>{r}</span>
+              </div>
+            ))}
+
+            <div style={{
+              marginTop:12,
+              background:C.bg,
+              borderRadius:10,
+              padding:"9px 12px",
+              fontSize:12,
+              color:C.textMid,
+              lineHeight:1.55
+            }}>
+              {assessment.notDiagnosis}
+            </div>
+          </div>
+
+          <div style={{
+            background:C.white,
+            border:"1px solid "+C.border,
+            borderRadius:16,
+            padding:16,
+            marginBottom:12,
+            boxShadow:C.shadow
+          }}>
+            <div style={{fontSize:15,fontWeight:800,color:C.text,marginBottom:10}}>
+              {assessment.labels.doNow}
+            </div>
+
+            {assessment.actions.map((a,i)=>(
+              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<assessment.actions.length-1?10:0}}>
+                <div style={{
+                  width:24,
+                  height:24,
+                  borderRadius:"50%",
+                  background:C.primary,
+                  color:"#fff",
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  fontSize:11,
+                  fontWeight:800,
+                  flexShrink:0
+                }}>
+                  {i+1}
+                </div>
+                <div style={{fontSize:13,color:C.text,lineHeight:1.65,paddingTop:2}}>{a}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            background:assessment.level==="high"?C.redLight:C.orangeLight,
+            border:"1px solid "+(assessment.level==="high"?"#FCA5A5":"#FCD34D"),
+            borderRadius:16,
+            padding:16,
+            marginBottom:12
+          }}>
+            <div style={{
+              fontSize:15,
+              fontWeight:800,
+              color:assessment.level==="high"?C.red:C.orange,
+              marginBottom:9
+            }}>
+              ⚠️ {assessment.labels.doctorWhen}
+            </div>
+
+            {assessment.doctor.map((d,i)=>(
+              <div key={i} style={{
+                fontSize:13,
+                color:assessment.level==="high"?C.red:C.orange,
+                lineHeight:1.65,
+                marginBottom:i<assessment.doctor.length-1?6:0,
+                fontWeight:500
+              }}>
+                • {d}
+              </div>
+            ))}
+          </div>
+
+          {assessment.lab.length > 0 && (
+            <div style={{
+              background:C.primaryLight,
+              border:"1px solid #BFDBFE",
+              borderRadius:16,
+              padding:16,
+              marginBottom:12
+            }}>
+              <div style={{fontSize:15,fontWeight:800,color:C.primaryDark,marginBottom:9}}>
+                🧪 {assessment.labels.labConsider}
+              </div>
+
+              {assessment.lab.map((l,i)=>(
+                <div key={i} style={{fontSize:13,color:C.primaryDark,lineHeight:1.65,marginBottom:i<assessment.lab.length-1?6:0}}>
+                  • {l}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{
+            background:C.white,
+            border:"1px solid "+C.border,
+            borderRadius:16,
+            padding:16,
+            marginBottom:20,
+            boxShadow:C.shadow
+          }}>
+            <div style={{fontSize:15,fontWeight:800,color:C.text,marginBottom:12}}>
+              {assessment.labels.nextStep}
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <button
+                onClick={sendToAI}
+                style={{
+                  background:C.primary,
+                  color:"#fff",
+                  border:"none",
+                  borderRadius:12,
+                  padding:"12px 10px",
+                  fontSize:13,
+                  fontWeight:700,
+                  cursor:"pointer",
+                  fontFamily:"inherit"
+                }}
+              >
+                💬 {lang==="en"?"Ask AI":"AI सँग सोध्नुहोस्"}
+              </button>
+
+              <button
+                onClick={()=>setTab("doctors")}
+                style={{
+                  background:C.primaryLight,
+                  color:C.primary,
+                  border:"1px solid #BFDBFE",
+                  borderRadius:12,
+                  padding:"12px 10px",
+                  fontSize:13,
+                  fontWeight:700,
+                  cursor:"pointer",
+                  fontFamily:"inherit"
+                }}
+              >
+                👨‍⚕️ {lang==="en"?"Find Doctor":"डाक्टर खोज्नुहोस्"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
