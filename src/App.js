@@ -5,6 +5,11 @@ import { SYMPTOMS } from "./data/symptomsData";
 import { DOCTORS } from "./data/doctorsData";
 import { FIRST_AID } from "./data/firstAidData";
 import {
+  PROVINCES,
+  DISTRICTS_BY_PROVINCE,
+  getLocalLevelsByDistrict as getLocalLevels
+} from "./data/nepalGeoData";
+import {
   Home,
   Stethoscope,
   ShieldPlus,
@@ -33,148 +38,6 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_KEY
 );
-
-// ─── Nepal Geographic Data ─────────────────────────────────────
-const PROVINCES = [
-  "Koshi",
-  "Madhesh",
-  "Bagmati",
-  "Gandaki",
-  "Lumbini",
-  "Karnali",
-  "Sudurpashchim",
-];
-
-const DISTRICTS_BY_PROVINCE = {
-  Koshi: [
-    "Taplejung",
-    "Panchthar",
-    "Ilam",
-    "Jhapa",
-    "Morang",
-    "Sunsari",
-    "Dhankuta",
-    "Terhathum",
-    "Sankhuwasabha",
-    "Bhojpur",
-    "Solukhumbu",
-    "Okhaldhunga",
-    "Khotang",
-    "Udayapur",
-  ],
-  Madhesh: [
-    "Saptari",
-    "Siraha",
-    "Dhanusha",
-    "Mahottari",
-    "Sarlahi",
-    "Rautahat",
-    "Bara",
-    "Parsa",
-  ],
-  Bagmati: [
-    "Kathmandu",
-    "Bhaktapur",
-    "Lalitpur",
-    "Kavrepalanchok",
-    "Sindhupalchok",
-    "Dolakha",
-    "Rasuwa",
-    "Dhading",
-    "Nuwakot",
-    "Makwanpur",
-    "Chitwan",
-    "Sindhuli",
-    "Ramechhap",
-  ],
-  Gandaki: [
-    "Kaski",
-    "Syangja",
-    "Parbat",
-    "Baglung",
-    "Mustang",
-    "Myagdi",
-    "Nawalpur",
-    "Gorkha",
-    "Lamjung",
-    "Tanahu",
-    "Manang",
-  ],
-  Lumbini: [
-    "Rupandehi",
-    "Kapilvastu",
-    "Arghakhanchi",
-    "Gulmi",
-    "Palpa",
-    "Nawalparasi West",
-    "Dang",
-    "Pyuthan",
-    "Rolpa",
-    "Rukum East",
-    "Banke",
-    "Bardiya",
-  ],
-  Karnali: [
-    "Surkhet",
-    "Dailekh",
-    "Jajarkot",
-    "Dolpa",
-    "Mugu",
-    "Humla",
-    "Jumla",
-    "Kalikot",
-    "Rukum West",
-    "Salyan",
-  ],
-  Sudurpashchim: [
-    "Kanchanpur",
-    "Kailali",
-    "Dadeldhura",
-    "Doti",
-    "Baitadi",
-    "Darchula",
-    "Bajhang",
-    "Bajura",
-    "Achham",
-  ],
-};
-
-const LOCAL_LEVELS = {
-  Kathmandu: [
-    "Kathmandu Metro",
-    "Kirtipur",
-    "Gokarneshwar",
-    "Budhanilkantha",
-    "Tokha",
-    "Tarakeshwar",
-    "Nagarjun",
-    "Kageshwori Manohara",
-    "Dakshinkali",
-    "Chandragiri",
-    "Shankharapur",
-  ],
-  Lalitpur: ["Lalitpur Metro", "Godawari", "Mahalaxmi", "Konjyosom RM", "Bagmati RM", "Mahankal RM"],
-  Bhaktapur: ["Bhaktapur", "Madhyapur Thimi", "Changunarayan", "Suryabinayak"],
-  Chitwan: ["Bharatpur Metro", "Ratnanagar", "Khairhani", "Madi", "Ichchhyakamana RM", "Rapti", "Kalika"],
-  Kaski: ["Pokhara Metro", "Annapurna RM", "Madi RM", "Machhapuchhre RM", "Rupa RM"],
-  Rupandehi: ["Butwal Sub-Metro", "Tilottama", "Devdaha", "Lumbini Sanskritik", "Sainamaina", "Maya Devi RM", "Rohini RM"],
-  Morang: ["Biratnagar Metro", "Rangeli", "Sundarharaicha", "Urlabari", "Letang", "Belbari", "Pathari Shanischare"],
-  Sunsari: ["Inaruwa", "Dharan Sub-Metro", "Itahari Sub-Metro", "Duhabi", "Barahakshetra", "Ramdhuni"],
-  Jhapa: ["Birtamod", "Mechinagar", "Bhadrapur", "Damak", "Kankai", "Arjundhara", "Buddhashanti RM"],
-  Parsa: ["Birgunj Metro", "Bahudarmai", "Pokhariya", "Parsagadhi", "Thori RM", "Bindabasini RM"],
-  Dhanusha: ["Janakpurdham Sub-Metro", "Chhireshwornath", "Dhanushadham", "Mithila", "Nagarain", "Sabaila"],
-  Banke: ["Nepalgunj Sub-Metro", "Kohalpur", "Narainapur RM", "Baijanath RM", "Khajura RM", "Raptisonari RM"],
-  Kailali: ["Dhangadhi Sub-Metro", "Godawari", "Tikapur", "Gauriganga", "Ghodaghodi", "Lamkichuha", "Kailari RM"],
-  Surkhet: ["Birendranagar", "Bheriganga", "Lekbesi", "Gurbhakot", "Panchpuri", "Chaukune RM"],
-};
-
-function getLocalLevels(district) {
-  return LOCAL_LEVELS[district] || [
-    `${district} Municipality`,
-    `${district} Rural Municipality`,
-    "Other Local Level",
-  ];
-}
 
 // ─── Transliteration ───────────────────────────────────────────
 const WM = {
