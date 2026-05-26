@@ -1,8 +1,8 @@
 import {
   Home,
   Stethoscope,
-  ShieldPlus,
   MessageCircle,
+  LayoutGrid,
   UserRound
 } from "lucide-react";
 
@@ -10,15 +10,15 @@ import { C } from "../constants/colors";
 
 export default function NavBar({ tab, setTab, lang }) {
   const L = {
-    en: ["Home", "Symptoms", "First Aid", "Chat", "Doctors"],
-    ne: ["घर", "लक्षण", "प्राथमिक", "सहायक", "डाक्टर"]
+    en: ["Home", "Symptoms", "Chat", "Services", "Doctors"],
+    ne: ["घर", "लक्षण", "सहायक", "सेवा", "डाक्टर"]
   };
 
   const items = [
     { id: "home", Icon: Home },
     { id: "check", Icon: Stethoscope },
-    { id: "firstaid", Icon: ShieldPlus },
     { id: "chat", Icon: MessageCircle },
+    { id: "services", Icon: LayoutGrid },
     { id: "doctors", Icon: UserRound }
   ];
 
@@ -38,13 +38,13 @@ export default function NavBar({ tab, setTab, lang }) {
         boxShadow: "0 -1px 8px rgba(0,0,0,0.06)"
       }}
     >
-      {items.map((it, i) => {
-        const active = tab === it.id;
+      {items.map((item, index) => {
+        const active = tab === item.id;
 
         return (
           <button
-            key={it.id}
-            onClick={() => setTab(it.id)}
+            key={item.id}
+            onClick={() => setTab(item.id)}
             style={{
               flex: 1,
               padding: "8px 2px 10px",
@@ -58,7 +58,7 @@ export default function NavBar({ tab, setTab, lang }) {
               borderTop: "2px solid " + (active ? C.primary : "transparent")
             }}
           >
-            <it.Icon
+            <item.Icon
               size={20}
               color={active ? C.primary : C.textLight}
               strokeWidth={active ? 2.8 : 2.1}
@@ -72,7 +72,7 @@ export default function NavBar({ tab, setTab, lang }) {
                 fontFamily: "inherit"
               }}
             >
-              {L[lang][i]}
+              {L[lang][index]}
             </span>
           </button>
         );
