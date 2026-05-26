@@ -58,9 +58,9 @@ export const SYMPTOMS = [
   {
     id: "cough",
     icon: "😮‍💨",
-    ne: "खाँसी लाग्छ",
+    ne: "खोकी लाग्छ",
     en: "Cough",
-    roman: ["khansi", "cough"],
+    roman: ["khoki", "khokhi", "khansi", "cough"],
     causesEn: ["Cold", "Bronchitis", "TB"],
     causesNe: ["रुघाखोकी", "ब्रोन्काइटिस", "TB"],
     advEn: "Drink warm water. Honey and ginger may help.",
