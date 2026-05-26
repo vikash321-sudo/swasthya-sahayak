@@ -679,24 +679,6 @@ function Av({ init, color, size = 44 }) {
   );
 }
 
-function SevBadge({ s, lang }) {
-  const m = {
-    low: { bg: C.greenLight, c: C.green },
-    medium: { bg: C.orangeLight, c: C.orange },
-    high: { bg: C.redLight, c: C.red },
-  };
-  const lb = {
-    low: { en: "Mild", ne: "सामान्य" },
-    medium: { en: "Moderate", ne: "मध्यम" },
-    high: { en: "Urgent", ne: "तत्काल" },
-  };
-  return (
-    <span style={{ background: m[s].bg, color: m[s].c, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
-      {lb[s][lang]}
-    </span>
-  );
-}
-
 function Sh({ title, action, onAction }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -1499,10 +1481,6 @@ function CheckScreen({initSym,setTab,setChatSeed,lang}){
       setError("");
     }
   },[initSym]);
-
-  const selectedSymptoms = selectedIds
-    .map(id => SYMPTOMS.find(s => s.id === id))
-    .filter(Boolean);
 
   const durationOptions = [
     {id:"today", en:"Today", ne:"आज मात्रै"},
