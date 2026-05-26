@@ -7,6 +7,7 @@ import { FIRST_AID } from "./data/firstAidData";
 import { r2n, isRom } from "./utils/transliteration";
 import { askAI } from "./utils/aiAssistant";
 import Av from "./components/Avatar";
+import Sh from "./components/SectionHeader";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -44,22 +45,6 @@ import {
 } from "lucide-react";
 
 // ─── Small Components ──────────────────────────────────────────
-
-function Sh({ title, action, onAction }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-      <span style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{title}</span>
-      {action && (
-        <button
-          onClick={onAction}
-          style={{ background: "none", border: "none", color: C.primary, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-        >
-          {action} ›
-        </button>
-      )}
-    </div>
-  );
-}
 
 function MedicalDisclaimer({ lang, compact = false }) {
   return (
