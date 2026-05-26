@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./config/supabase";
 import { C } from "./constants/colors";
 import { SYMPTOMS } from "./data/symptomsData";
 import { DOCTORS } from "./data/doctorsData";
@@ -33,11 +33,6 @@ import {
   Clock,
   ClipboardList,
 } from "lucide-react";
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_KEY
-);
 
 // ─── Transliteration ───────────────────────────────────────────
 const WM = {
