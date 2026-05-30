@@ -3571,20 +3571,211 @@ function FollowUpScreen({ lang }) {
     </div>
   );
 }
+function EmptyRecord({ icon, title, desc }) {
+  return (
+    <div
+      style={{
+        background: C.white,
+        borderRadius: 14,
+        padding: 24,
+        textAlign: "center",
+        border: "1px solid " + C.border,
+        boxShadow: C.shadow
+      }}
+    >
+      <div style={{ fontSize: 34, marginBottom: 8 }}>{icon}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 4 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 12, color: C.textLight, lineHeight: 1.5 }}>
+        {desc}
+      </div>
+    </div>
+  );
+}
 
+function RecordCard({ icon, title, subtitle, meta, status, amount, lang }) {
+  const statusColor =
+    status === "completed"
+      ? C.green
+      : status === "cancelled"
+      ? C.red
+      : status === "confirmed"
+      ? C.primary
+      : C.orange;
+
+  const statusBg =
+    status === "completed"
+      ? C.greenLight
+      : status === "cancelled"
+      ? C.redLight
+      : status === "confirmed"
+      ? C.primaryLight
+      : C.orangeLight;
+
+  return (
+    <div
+      style={{
+        background: C.white,
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 10,
+        border: "1px solid " + C.border,
+        boxShadow: C.shadow
+      }}
+    >
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: C.primaryLight,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            flexShrink: 0
+          }}
+        >
+          {icon}
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 900, color: C.text, marginBottom: 3 }}>
+            {title}
+          </div>
+
+          <div style={{ fontSize: 12, color: C.textLight, marginBottom: 6 }}>
+            {subtitle}
+          </div>
+
+          <div style={{ fontSize: 11, color: C.textMid }}>
+            {meta}
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <span
+            style={{
+              background: statusBg,
+              color: statusColor,
+              borderRadius: 20,
+              padding: "4px 8px",
+              fontSize: 10,
+              fontWeight: 900,
+              textTransform: "capitalize"
+            }}
+          >
+            {status || "pending"}
+          </span>
+
+          {amount && (
+            <div
+              style={{
+                fontSize: 12,
+                color: C.text,
+                fontWeight: 900,
+                marginTop: 8
+              }}
+            >
+              {amount}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 10,
+          background: C.bg,
+          borderRadius: 10,
+          padding: "8px 10px",
+          fontSize: 11,
+          color: C.textMid,
+          lineHeight: 1.5
+        }}
+      >
+        {lang === "en"
+          ? "Status will update after partner confirmation."
+          : "Partner confirmation पछि status update हुनेछ।"}
+      </div>
+    </div>
+  );
+}
 // ─── Profile ───────────────────────────────────────────────────
 function ProfileScreen({ user, onLogout, lang, onLangChange }) {
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+const [labRequests, setLabRequests] = useState([]);
+const [medicineRequests, setMedicineRequests] = useState([]);
+const [activeRecordTab, setActiveRecordTab] = useState("chats");
+const [loading, setLoading] = useState(true);
+const [recordsError, setRecordsError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const { data } = await supabase.from("health_chats").select("*").eq("user_id", user.user_id).eq("role", "user").order("created_at", { ascending: false }).limit(20);
-      setHistory(data || []);
-      setLoading(false);
+ useEffect(() => {
+  async function loadRecords() {
+    setLoading(true);
+    setRecordsError("");
+
+    try {
+      const {
+        data: { user: authUser },
+        error: authError
+      } = await supabase.auth.getUser();
+
+      if (authError || !authUser?.id) {
+        throw new Error(
+          lang === "en"
+            ? "Login session expired. Please log in again."
+            : "Login session सकियो। कृपया फेरि login गर्नुहोस्।"
+        );
+      }
+
+      const [chatResult, labResult, medicineResult] = await Promise.all([
+        supabase
+          .from("health_chats")
+          .select("*")
+          .eq("user_id", user.user_id)
+          .eq("role", "user")
+          .order("created_at", { ascending: false })
+          .limit(20),
+
+        supabase
+          .from("lab_requests")
+          .select("*")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+
+        supabase
+          .from("medicine_requests")
+          .select("*")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      ]);
+
+      if (chatResult.error) throw chatResult.error;
+      if (labResult.error) throw labResult.error;
+      if (medicineResult.error) throw medicineResult.error;
+
+      setHistory(chatResult.data || []);
+      setLabRequests(labResult.data || []);
+      setMedicineRequests(medicineResult.data || []);
+    } catch (err) {
+      setRecordsError(
+        err?.message ||
+          (lang === "en"
+            ? "Could not load health records."
+            : "स्वास्थ्य रेकर्ड लोड गर्न सकिएन।")
+      );
     }
-    load();
-  }, [user.user_id]);
+
+    setLoading(false);
+  }
+
+  loadRecords();
+}, [user.user_id, lang]);
 
   async function handleLangChange(l) {
     onLangChange(l);
@@ -3617,10 +3808,179 @@ function ProfileScreen({ user, onLogout, lang, onLangChange }) {
           {[ ["en", "English"], ["ne", "नेपाली"] ].map(([l, label]) => <button key={l} onClick={() => handleLangChange(l)} style={{ flex: 1, background: lang === l ? C.white : "transparent", color: lang === l ? C.primary : C.textLight, border: "none", borderRadius: 9, padding: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: lang === l ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>{label}</button>)}
         </div>
       </div>
+       <Sh title={lang === "en" ? "Health Records" : "स्वास्थ्य रेकर्ड"} />
 
-      <Sh title={lang === "en" ? "Health History" : "स्वास्थ्य इतिहास"} />
-      {loading ? <div style={{ textAlign: "center", padding: 20, color: C.textLight }}>{lang === "en" ? "Loading..." : "लोड हुँदैछ..."}</div> : history.length === 0 ? <div style={{ background: C.white, borderRadius: 14, padding: 24, textAlign: "center", border: `1px solid ${C.border}` }}><MessageCircle size={34} color={C.textLight} /><div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 8 }}>{lang === "en" ? "No conversations yet" : "कुराकानी छैन"}</div></div> : history.map((h) => <div key={h.id || h.created_at} style={{ background: C.white, borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `1px solid ${C.border}`, boxShadow: C.shadow }}><div style={{ fontSize: 13, color: C.text, marginBottom: 4, lineHeight: 1.5 }}>{h.message.length > 80 ? `${h.message.slice(0, 80)}...` : h.message}</div><div style={{ fontSize: 10, color: C.textLight }}>{new Date(h.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : "en-US", { year: "numeric", month: "short", day: "numeric" })}</div></div>)}
-      <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 8,
+    marginBottom: 14
+  }}
+>
+  {[
+    ["chats", lang === "en" ? "Chats" : "च्याट", history.length],
+    ["labs", lang === "en" ? "Labs" : "ल्याब", labRequests.length],
+    ["medicine", lang === "en" ? "Medicine" : "औषधि", medicineRequests.length]
+  ].map(([id, label, count]) => (
+    <button
+      key={id}
+      onClick={() => setActiveRecordTab(id)}
+      style={{
+        background: activeRecordTab === id ? C.primary : C.white,
+        color: activeRecordTab === id ? "#fff" : C.textMid,
+        border: "1px solid " + (activeRecordTab === id ? C.primary : C.border),
+        borderRadius: 12,
+        padding: "10px 6px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        fontSize: 12,
+        fontWeight: 800
+      }}
+    >
+      {label}
+      <div
+        style={{
+          fontSize: 10,
+          opacity: 0.8,
+          marginTop: 2
+        }}
+      >
+        {count}
+      </div>
+    </button>
+  ))}
+</div>
+
+{recordsError && (
+  <div
+    style={{
+      background: C.redLight,
+      border: "1px solid #FECACA",
+      borderRadius: 12,
+      padding: "10px 12px",
+      fontSize: 12,
+      color: C.red,
+      fontWeight: 700,
+      lineHeight: 1.5,
+      marginBottom: 12
+    }}
+  >
+    {recordsError}
+  </div>
+)}
+
+{loading ? (
+  <div style={{ textAlign: "center", padding: 20, color: C.textLight }}>
+    {lang === "en" ? "Loading..." : "लोड हुँदैछ..."}
+  </div>
+) : (
+  <>
+    {activeRecordTab === "chats" && (
+      <div>
+        {history.length === 0 ? (
+          <EmptyRecord
+            icon="💬"
+            title={lang === "en" ? "No conversations yet" : "कुराकानी छैन"}
+            desc={lang === "en" ? "Your AI chat history will appear here." : "AI chat history यहाँ देखिनेछ।"}
+          />
+        ) : (
+          history.map((h) => (
+            <div
+              key={h.id || h.created_at}
+              style={{
+                background: C.white,
+                borderRadius: 12,
+                padding: "12px 14px",
+                marginBottom: 8,
+                border: "1px solid " + C.border,
+                boxShadow: C.shadow
+              }}
+            >
+              <div style={{ fontSize: 13, color: C.text, marginBottom: 4, lineHeight: 1.5 }}>
+                {h.message.length > 80 ? `${h.message.slice(0, 80)}...` : h.message}
+              </div>
+              <div style={{ fontSize: 10, color: C.textLight }}>
+                {new Date(h.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : "en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric"
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    )}
+
+    {activeRecordTab === "labs" && (
+      <div>
+        {labRequests.length === 0 ? (
+          <EmptyRecord
+            icon="🧪"
+            title={lang === "en" ? "No lab requests yet" : "ल्याब अनुरोध छैन"}
+            desc={lang === "en" ? "Lab bookings will appear here after submission." : "ल्याब booking submit गरेपछि यहाँ देखिनेछ।"}
+          />
+        ) : (
+          labRequests.map((req) => (
+            <RecordCard
+              key={req.id}
+              icon="🧪"
+              title={lang === "en" ? req.test_name_en : req.test_name_ne || req.test_name_en}
+              subtitle={
+                req.collection_type === "home"
+                  ? lang === "en"
+                    ? "Home sample collection"
+                    : "घरमै sample collection"
+                  : lang === "en"
+                  ? "Visit lab"
+                  : "Lab मा जाने"
+              }
+              meta={`${req.requested_date} · ${req.time_slot}`}
+              status={req.status}
+              amount={req.estimated_price}
+              lang={lang}
+            />
+          ))
+        )}
+      </div>
+    )}
+
+    {activeRecordTab === "medicine" && (
+      <div>
+        {medicineRequests.length === 0 ? (
+          <EmptyRecord
+            icon="💊"
+            title={lang === "en" ? "No medicine requests yet" : "औषधि अनुरोध छैन"}
+            desc={lang === "en" ? "Medicine requests will appear here after submission." : "औषधि request submit गरेपछि यहाँ देखिनेछ।"}
+          />
+        ) : (
+          medicineRequests.map((req) => (
+            <RecordCard
+              key={req.id}
+              icon="💊"
+              title={req.medicine_name}
+              subtitle={
+                req.request_type === "delivery"
+                  ? lang === "en"
+                    ? "Delivery request"
+                    : "Delivery अनुरोध"
+                  : lang === "en"
+                  ? "Pickup request"
+                  : "Pickup अनुरोध"
+              }
+              meta={req.medicine_type}
+              status={req.status}
+              amount={null}
+              lang={lang}
+            />
+          ))
+        )}
+      </div>
+    )}
+  </>
+)}
+     <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
         <button onClick={handleLogout} style={{ width: "100%", background: C.redLight, color: C.red, border: "1px solid #FECACA", borderRadius: 12, padding: "13px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><LogOut size={16} /> {lang === "en" ? "Sign Out" : "साइन आउट"}</button>
       </div>
     </div>
