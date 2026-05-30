@@ -2246,6 +2246,8 @@ function MedicineRequestFlow({ lang, user }) {
   );
   const [prescriptionNote, setPrescriptionNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const medicineTypes = [
     {
@@ -2273,6 +2275,62 @@ function MedicineRequestFlow({ lang, user }) {
       descNe: "ORS, thermometer, bandage जस्ता सामान्य सामग्री।"
     }
   ];
+async function submitMedicineRequest() {
+  if (!medicineType || !medicineName.trim() || !address.trim()) {
+    alert(
+      lang === "en"
+        ? "Please select type, enter medicine name and address."
+        : "कृपया type छान्नुहोस्, औषधिको नाम र ठेगाना लेख्नुहोस्।"
+    );
+    return;
+  }
+
+  setSaving(true);
+  setSaveError("");
+
+  try {
+    const {
+      data: { user: authUser },
+      error: authError
+    } = await supabase.auth.getUser();
+
+    if (authError || !authUser?.id) {
+      throw new Error(
+        lang === "en"
+          ? "Your login session expired. Please log out and log in again."
+          : "Login session सकियो। कृपया logout गरेर फेरि login गर्नुहोस्।"
+      );
+    }
+
+    const payload = {
+      user_id: authUser.id,
+      patient_name: user?.name || authUser.email || null,
+      medicine_type: medicineType,
+      medicine_name: medicineName.trim(),
+      request_type: requestType,
+      address: address.trim(),
+      prescription_note: prescriptionNote.trim() || null,
+      status: "pending"
+    };
+
+    const { error } = await supabase
+      .from("medicine_requests")
+      .insert([payload]);
+
+    if (error) throw error;
+
+    setSubmitted(true);
+  } catch (err) {
+    setSaveError(
+      err?.message ||
+        (lang === "en"
+          ? "Could not submit medicine request. Please try again."
+          : "औषधि अनुरोध पठाउन सकिएन। फेरि प्रयास गर्नुहोस्।")
+    );
+  }
+
+  setSaving(false);
+}
 
   if (submitted) {
     return (
@@ -2646,19 +2704,26 @@ function MedicineRequestFlow({ lang, user }) {
           : "Prescription र medicine availability registered pharmacy ले verify गरेपछि मात्र confirm हुन्छ। Prototype mode मा app ले सिधै औषधि बेच्दैन।"}
       </div>
 
+{saveError && (
+  <div
+    style={{
+      background: C.redLight,
+      border: "1px solid #FECACA",
+      borderRadius: 12,
+      padding: "10px 12px",
+      fontSize: 12,
+      color: C.red,
+      fontWeight: 700,
+      lineHeight: 1.5,
+      marginBottom: 12
+    }}
+  >
+    {saveError}
+  </div>
+)}
       <button
-        onClick={() => {
-          if (!medicineType || !medicineName.trim() || !address.trim()) {
-            alert(
-              lang === "en"
-                ? "Please select type, enter medicine name and address."
-                : "कृपया type छान्नुहोस्, औषधिको नाम र ठेगाना लेख्नुहोस्।"
-            );
-            return;
-          }
-
-          setSubmitted(true);
-        }}
+  onClick={submitMedicineRequest}
+  disabled={saving}
         style={{
           width: "100%",
           background: C.green,
@@ -2668,12 +2733,15 @@ function MedicineRequestFlow({ lang, user }) {
           padding: "14px",
           fontSize: 15,
           fontWeight: 800,
-          cursor: "pointer",
           fontFamily: "inherit",
-          boxShadow: "0 8px 18px rgba(5,150,105,0.22)"
+          boxShadow: "0 8px 18px rgba(5,150,105,0.22)",
+          opacity: saving ? 0.75 : 1,
+cursor: saving ? "not-allowed" : "pointer",
         }}
       >
-        {lang === "en" ? "Submit Medicine Request" : "औषधि अनुरोध पठाउनुहोस्"}
+       {saving
+  ? (lang === "en" ? "Submitting..." : "पठाउँदैछ...")
+  : (lang === "en" ? "Submit Medicine Request" : "औषधि अनुरोध पठाउनुहोस्")}
       </button>
     </div>
   );
