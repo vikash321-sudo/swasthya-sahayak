@@ -1748,22 +1748,26 @@ const [saveError, setSaveError] = useState("");
     return;
   }
 
-  if (!user?.user_id) {
-    alert(
-      lang === "en"
-        ? "Please login again before submitting a lab request."
-        : "ल्याब अनुरोध पठाउनुअघि फेरि login गर्नुहोस्।"
-    );
-    return;
-  }
-
   setSaving(true);
   setSaveError("");
 
   try {
+    const {
+      data: { user: authUser },
+      error: authError
+    } = await supabase.auth.getUser();
+
+    if (authError || !authUser?.id) {
+      throw new Error(
+        lang === "en"
+          ? "Your login session expired. Please log out and log in again."
+          : "Login session सकियो। कृपया logout गरेर फेरि login गर्नुहोस्।"
+      );
+    }
+
     const payload = {
-      user_id: user.user_id,
-      patient_name: user?.name || null,
+      user_id: authUser.id,
+      patient_name: user?.name || authUser.email || null,
       test_id: selectedTest.id,
       test_name_en: selectedTest.nameEn,
       test_name_ne: selectedTest.nameNe,
