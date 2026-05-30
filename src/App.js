@@ -1096,6 +1096,65 @@ function ChatScreen({ seed, setSeed, online, user, lang }) {
     setLoading(false);
   }
 
+  const starterCards = lang === "en"
+    ? [
+        {
+          icon: "🌡️",
+          title: "Fever or weakness",
+          desc: "Tell AI about fever, body pain, chills or tiredness.",
+          prompt: "I have fever and weakness. Please ask me questions first."
+        },
+        {
+          icon: "😮‍💨",
+          title: "Cough or breathing",
+          desc: "For khoki, cough, chest discomfort or breathing issue.",
+          prompt: "I have cough/khoki. Please ask what details you need."
+        },
+        {
+          icon: "🚨",
+          title: "Emergency signs",
+          desc: "Chest pain, breathing difficulty, fainting or severe bleeding.",
+          prompt: "What are emergency warning signs where I should call 102?"
+        },
+        {
+          icon: "🧪",
+          title: "Need lab test?",
+          desc: "Ask when lab tests should be discussed with a doctor.",
+          prompt: "When should I consider a lab test for my symptoms?"
+        }
+      ]
+    : [
+        {
+          icon: "🌡️",
+          title: "ज्वरो वा कमजोरी",
+          desc: "ज्वरो, शरीर दुख्ने, चिसो लाग्ने वा कमजोरीबारे सोध्नुहोस्।",
+          prompt: "मलाई ज्वरो र कमजोरी छ। पहिले मलाई प्रश्न सोध्नुहोस्।"
+        },
+        {
+          icon: "😮‍💨",
+          title: "खोकी वा सास",
+          desc: "खोकी, छाती discomfort वा सास फेर्न गाह्रो भए।",
+          prompt: "मलाई खोकी लागेको छ। के-के जानकारी चाहिन्छ भनेर सोध्नुहोस्।"
+        },
+        {
+          icon: "🚨",
+          title: "आपतकालीन चिन्ह",
+          desc: "छाती दुख्ने, सास फेर्न गाह्रो, बेहोस वा धेरै रगत बग्ने।",
+          prompt: "कस्ता emergency warning signs भए 102 मा फोन गर्नुपर्छ?"
+        },
+        {
+          icon: "🧪",
+          title: "Lab test चाहिन्छ?",
+          desc: "कहिले doctor सँग lab test बारे छलफल गर्ने?",
+          prompt: "मेरो लक्षणमा lab test कहिले सोच्नुपर्छ?"
+        }
+      ];
+
+  function chooseStarter(prompt) {
+    setInput(prompt);
+    setPrev(isRom(prompt) ? r2n(prompt) || "" : "");
+  }
+
   const qs = lang === "en" ? ["I have fever", "Should I see a doctor?", "Home remedies?", "Emergency signs"] : ["मलाई ज्वरो छ", "डाक्टर जानुपर्छ?", "घरमा उपाय?", "आपतकालीन चिन्ह"];
 
   return (
@@ -1110,6 +1169,71 @@ function ChatScreen({ seed, setSeed, online, user, lang }) {
             </div>
           </div>
         ))}
+                {msgs.length === 1 && !loading && (
+          <div style={{ margin: "4px 0 16px 40px" }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: C.textMid,
+                marginBottom: 10
+              }}
+            >
+              {lang === "en" ? "Start with one of these" : "यीमध्ये एकबाट सुरु गर्नुहोस्"}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 9
+              }}
+            >
+              {starterCards.map((card) => (
+                <button
+                  key={card.title}
+                  onClick={() => chooseStarter(card.prompt)}
+                  style={{
+                    background: C.white,
+                    border: "1px solid " + C.border,
+                    borderRadius: 14,
+                    padding: 12,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    boxShadow: C.shadow
+                  }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>
+                    {card.icon}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: C.text,
+                      marginBottom: 4
+                    }}
+                  >
+                    {card.title}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: C.textLight,
+                      lineHeight: 1.45
+                    }}
+                  >
+                    {card.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         {loading && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <Av init="AI" color={C.primary} size={32} />
