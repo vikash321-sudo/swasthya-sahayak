@@ -1233,7 +1233,7 @@ function ChatScreen({ seed, setSeed, online, user, lang }) {
             </div>
           </div>
         )}
-        
+
         {loading && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <Av init="AI" color={C.primary} size={32} />
@@ -1653,6 +1653,8 @@ function LabBookingFlow({ lang, user }) {
   );
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+const [saveError, setSaveError] = useState("");
 
   const labTests = [
     {
@@ -1736,6 +1738,62 @@ function LabBookingFlow({ lang, user }) {
     "2:00 PM - 4:00 PM",
     "4:00 PM - 6:00 PM"
   ];
+  async function submitLabRequest() {
+  if (!selectedTest || !date || !timeSlot || !address.trim()) {
+    alert(
+      lang === "en"
+        ? "Please select test, date, time and address."
+        : "कृपया test, मिति, समय र ठेगाना छान्नुहोस्।"
+    );
+    return;
+  }
+
+  if (!user?.user_id) {
+    alert(
+      lang === "en"
+        ? "Please login again before submitting a lab request."
+        : "ल्याब अनुरोध पठाउनुअघि फेरि login गर्नुहोस्।"
+    );
+    return;
+  }
+
+  setSaving(true);
+  setSaveError("");
+
+  try {
+    const payload = {
+      user_id: user.user_id,
+      patient_name: user?.name || null,
+      test_id: selectedTest.id,
+      test_name_en: selectedTest.nameEn,
+      test_name_ne: selectedTest.nameNe,
+      collection_type: collectionType,
+      requested_date: date,
+      time_slot: timeSlot,
+      address: address.trim(),
+      notes: notes.trim() || null,
+      estimated_price: selectedTest.price,
+      status: "pending"
+    };
+
+    const { error } = await supabase
+      .from("lab_requests")
+      .insert([payload]);
+
+    if (error) throw error;
+
+    setSubmitted(true);
+  } catch (err) {
+    setSaveError(
+      err?.message ||
+        (lang === "en"
+          ? "Could not submit lab request. Please try again."
+          : "ल्याब अनुरोध पठाउन सकिएन। फेरि प्रयास गर्नुहोस्।")
+    );
+  }
+
+  setSaving(false);
+}
 
   if (submitted) {
     return (
@@ -2131,20 +2189,26 @@ function LabBookingFlow({ lang, user }) {
           />
         </div>
       </div>
-
+      {saveError && (
+  <div
+    style={{
+      background: C.redLight,
+      border: "1px solid #FECACA",
+      borderRadius: 12,
+      padding: "10px 12px",
+      fontSize: 12,
+      color: C.red,
+      fontWeight: 700,
+      lineHeight: 1.5,
+      marginBottom: 12
+    }}
+  >
+    {saveError}
+  </div>
+)}
       <button
-        onClick={() => {
-          if (!selectedTest || !date || !timeSlot || !address.trim()) {
-            alert(
-              lang === "en"
-                ? "Please select test, date, time and address."
-                : "कृपया test, मिति, समय र ठेगाना छान्नुहोस्।"
-            );
-            return;
-          }
-
-          setSubmitted(true);
-        }}
+  onClick={submitLabRequest}
+  disabled={saving}
         style={{
           width: "100%",
           background: C.primary,
@@ -2154,12 +2218,16 @@ function LabBookingFlow({ lang, user }) {
           padding: "14px",
           fontSize: 15,
           fontWeight: 800,
-          cursor: "pointer",
           fontFamily: "inherit",
-          boxShadow: "0 8px 18px rgba(37,99,235,0.22)"
+          boxShadow: "0 8px 18px rgba(37,99,235,0.22)",
+          opacity: saving ? 0.75 : 1,
+          cursor: saving ? "not-allowed" : "pointer",
+          
         }}
       >
-        {lang === "en" ? "Submit Lab Request" : "ल्याब अनुरोध पठाउनुहोस्"}
+        {saving
+  ? (lang === "en" ? "Submitting..." : "पठाउँदैछ...")
+  : (lang === "en" ? "Submit Lab Request" : "ल्याब अनुरोध पठाउनुहोस्")}
       </button>
     </div>
   );
