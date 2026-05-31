@@ -66,6 +66,10 @@ function IconTile({ Icon, label, onClick, bg, color }) {
 }
 // ─── Auth Screen ───────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
+  const [role, setRole] = useState("member");
+const [organizationName, setOrganizationName] = useState("");
+const [licenseNumber, setLicenseNumber] = useState("");
+const [serviceArea, setServiceArea] = useState("");
   const [mode, setMode] = useState("login");
   const [step, setStep] = useState(1);
   const [lang, setLang] = useState("en");
@@ -99,7 +103,21 @@ function AuthScreen({ onLogin }) {
       if (err) throw err;
       if (!data.user) throw new Error(lang === "en" ? "Please confirm your email, then login." : "कृपया इमेल पुष्टि गरेर लग इन गर्नुहोस्।");
       const uid = data.user.id;
-      const profile = { user_id: uid, name: name.trim(), age, province, district, local_level: localLevel, lang, phone };
+      const profile = {
+  user_id: uid,
+  name: name.trim(),
+  age,
+  province,
+  district,
+  local_level: localLevel,
+  lang,
+  phone,
+  role,
+  verification_status: role === "member" ? "approved" : "pending_verification",
+  organization_name: isProviderRole ? organizationName.trim() || null : null,
+  license_number: isProviderRole ? licenseNumber.trim() || null : null,
+  service_area: isProviderRole ? serviceArea.trim() || null : null
+};
       await supabase.from("health_profiles").insert([profile]);
       localStorage.setItem("ss_user", JSON.stringify(profile));
       onLogin(profile);
@@ -140,7 +158,50 @@ function AuthScreen({ onLogin }) {
       ))}
     </select>
   );
+const roleOptions = [
+  {
+    id: "member",
+    icon: "👤",
+    en: "Health Member",
+    ne: "Health Member",
+    descEn: "Use AI chat, symptom check, lab booking and health records.",
+    descNe: "AI chat, symptom check, lab booking र health records प्रयोग गर्नुहोस्।"
+  },
+  {
+    id: "doctor",
+    icon: "👨‍⚕️",
+    en: "Doctor",
+    ne: "डाक्टर",
+    descEn: "Manage appointment requests after verification.",
+    descNe: "Verification पछि appointment requests manage गर्नुहोस्।"
+  },
+  {
+    id: "pharmacy",
+    icon: "💊",
+    en: "Pharmacy Partner",
+    ne: "Pharmacy Partner",
+    descEn: "Receive and manage medicine requests.",
+    descNe: "Medicine requests receive र manage गर्नुहोस्।"
+  },
+  {
+    id: "lab",
+    icon: "🧪",
+    en: "Lab Partner",
+    ne: "Lab Partner",
+    descEn: "Manage lab test bookings and reports.",
+    descNe: "Lab test bookings र reports manage गर्नुहोस्।"
+  },
+  {
+    id: "field_partner",
+    icon: "🛵",
+    en: "Field Partner",
+    ne: "Field Partner",
+    descEn: "Handle medicine delivery or sample collection tasks.",
+    descNe: "Medicine delivery वा sample collection tasks handle गर्नुहोस्।"
+  }
+];
 
+const isProviderRole = role !== "member";
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1D4ED8 0%,#2563EB 45%,#0D9488 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter','Noto Sans Devanagari',system-ui,sans-serif" }}>
       <div style={{ position: "absolute", top: 20, right: 20, display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 3, gap: 2 }}>
@@ -197,6 +258,186 @@ function AuthScreen({ onLogin }) {
                 <div><div style={{ fontSize: 12, fontWeight: 700, color: C.textMid, marginBottom: 5 }}>{lang === "en" ? "Phone (optional)" : "फोन (ऐच्छिक)"}</div>{inp(phone, setPhone, "tel", "98XXXXXXXX")}</div>
                 <div><div style={{ fontSize: 12, fontWeight: 700, color: C.textMid, marginBottom: 5 }}>{lang === "en" ? "Password" : "पासवर्ड"} *</div><input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" style={inputStyle} /></div>
                 <div><div style={{ fontSize: 12, fontWeight: 700, color: C.textMid, marginBottom: 5 }}>{lang === "en" ? "Age" : "उमेर"}</div>{inp(age, setAge, "text", "25")}</div>
+                <div>
+  <div
+    style={{
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.textMid,
+      marginBottom: 8
+    }}
+  >
+    {lang === "en" ? "I am joining as" : "म यस रूपमा जोडिँदैछु"}
+  </div>
+
+  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {roleOptions.map((option) => {
+      const active = role === option.id;
+
+      return (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => setRole(option.id)}
+          style={{
+            background: active ? C.primaryLight : C.white,
+            border: "1.5px solid " + (active ? C.primary : C.border),
+            borderRadius: 12,
+            padding: 12,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-start",
+            textAlign: "left"
+          }}
+        >
+          <div style={{ fontSize: 22, width: 28, flexShrink: 0 }}>
+            {option.icon}
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 900,
+                color: active ? C.primary : C.text
+              }}
+            >
+              {lang === "en" ? option.en : option.ne}
+            </div>
+
+            <div
+              style={{
+                fontSize: 11,
+                color: C.textLight,
+                lineHeight: 1.4,
+                marginTop: 2
+              }}
+            >
+              {lang === "en" ? option.descEn : option.descNe}
+            </div>
+          </div>
+
+          <div
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              border: "2px solid " + (active ? C.primary : C.border),
+              background: active ? C.primary : "transparent",
+              flexShrink: 0,
+              marginTop: 2
+            }}
+          />
+        </button>
+      );
+    })}
+  </div>
+</div>
+
+{isProviderRole && (
+  <div
+    style={{
+      background: C.orangeLight,
+      border: "1px solid #FCD34D",
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 12,
+      color: C.orange,
+      lineHeight: 1.55,
+      fontWeight: 600
+    }}
+  >
+    {lang === "en"
+      ? "Provider accounts require verification before receiving real requests."
+      : "Provider accounts ले real requests पाउनुअघि verification आवश्यक हुन्छ।"}
+  </div>
+)}
+
+{isProviderRole && (
+  <>
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: C.textMid,
+          marginBottom: 5
+        }}
+      >
+        {role === "doctor"
+          ? lang === "en"
+            ? "Clinic / Hospital Name"
+            : "Clinic / Hospital नाम"
+          : role === "pharmacy"
+          ? lang === "en"
+            ? "Pharmacy Name"
+            : "Pharmacy नाम"
+          : role === "lab"
+          ? lang === "en"
+            ? "Lab Name"
+            : "Lab नाम"
+          : lang === "en"
+          ? "Organization / Work Name"
+          : "Organization / कामको नाम"}
+      </div>
+
+      {inp(
+        organizationName,
+        setOrganizationName,
+        "text",
+        lang === "en" ? "Enter name" : "नाम लेख्नुहोस्"
+      )}
+    </div>
+
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: C.textMid,
+          marginBottom: 5
+        }}
+      >
+        {role === "field_partner"
+          ? lang === "en"
+            ? "ID / Vehicle / Reference Number"
+            : "ID / Vehicle / Reference Number"
+          : lang === "en"
+          ? "License / Registration Number"
+          : "License / Registration Number"}
+      </div>
+
+      {inp(
+        licenseNumber,
+        setLicenseNumber,
+        "text",
+        lang === "en" ? "Enter number if available" : "भएमा number लेख्नुहोस्"
+      )}
+    </div>
+
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: C.textMid,
+          marginBottom: 5
+        }}
+      >
+        {lang === "en" ? "Service Area" : "सेवा क्षेत्र"}
+      </div>
+
+      {inp(
+        serviceArea,
+        setServiceArea,
+        "text",
+        lang === "en" ? "Example: Butwal, Tilottama" : "उदाहरण: Butwal, Tilottama"
+      )}
+    </div>
+  </>
+)}
                 <button onClick={() => { if (!name.trim() || !email.trim() || !password.trim()) { setError(lang === "en" ? "Fill required fields." : "अनिवार्य फिल्ड भर्नुहोस्।"); return; } if (password.length < 6) { setError(lang === "en" ? "Password must be at least 6 characters." : "पासवर्ड कम्तीमा ६ अक्षरको हुनुपर्छ।"); return; } setError(""); setStep(2); }} style={{ width: "100%", marginTop: 8, background: C.primary, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{lang === "en" ? "Next: Location" : "अर्को: ठेगाना"} →</button>
               </div>
             )}
