@@ -13,6 +13,7 @@ import NavBar from "./components/NavBar";
 import Drawer from "./components/Drawer";
 import VoiceInput from "./components/VoiceInput";
 import ServicesScreen from "./screens/ServicesScreen";
+import EmptyRecord from "./components/EmptyRecord";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -1392,28 +1393,6 @@ function FollowUpScreen({ lang }) {
       {upcoming.map((f) => <button key={f.id} onClick={() => setActive(f)} style={{ width: "100%", background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 10, cursor: "pointer", boxShadow: C.shadow, display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit", textAlign: "left" }}><div style={{ width: 44, height: 44, borderRadius: 12, background: `${f.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{f.icon}</div><div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 2 }}>{f.symptom}</div><div style={{ fontSize: 12, color: C.textLight }}>📅 {f.date} · ⏱ {f.time}</div></div><span style={{ background: C.orangeLight, color: C.orange, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800 }}>{lang === "en" ? "Upcoming" : "आगामी"}</span></button>)}
       <Sh title={lang === "en" ? "Past Follow-ups" : "हालैका फलो-अप"} />
       {done.map((f) => <div key={f.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, marginBottom: 10, boxShadow: C.shadow, display: "flex", alignItems: "center", gap: 12 }}><div style={{ width: 44, height: 44, borderRadius: 12, background: C.greenLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{f.icon}</div><div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 2 }}>{f.symptom}</div><div style={{ fontSize: 12, color: C.textLight }}>📅 {f.date} · ⏱ {f.time}</div></div><span style={{ background: C.greenLight, color: C.green, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800 }}>✓ {lang === "en" ? "Done" : "पूरा"}</span></div>)}
-    </div>
-  );
-}
-function EmptyRecord({ icon, title, desc }) {
-  return (
-    <div
-      style={{
-        background: C.white,
-        borderRadius: 14,
-        padding: 24,
-        textAlign: "center",
-        border: "1px solid " + C.border,
-        boxShadow: C.shadow
-      }}
-    >
-      <div style={{ fontSize: 34, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 4 }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 12, color: C.textLight, lineHeight: 1.5 }}>
-        {desc}
-      </div>
     </div>
   );
 }
