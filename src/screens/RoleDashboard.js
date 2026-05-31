@@ -1,5 +1,6 @@
 import { LogOut } from "lucide-react";
 import { C } from "../constants/colors";
+import PharmacyRequestsPanel from "../features/providers/PharmacyRequestsPanel";
 
 export default function RoleDashboard({ user, lang, onLangChange, onLogout }) {
   const role = user?.role || "member";
@@ -268,62 +269,66 @@ export default function RoleDashboard({ user, lang, onLangChange, onLogout }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {current.cards.map(([icon, title, desc]) => (
-            <div
-              key={title}
-              style={{
-                background: C.white,
-                border: "1px solid " + C.border,
-                borderRadius: 16,
-                padding: 15,
-                display: "flex",
-                gap: 12,
-                alignItems: "flex-start",
-                boxShadow: C.shadow
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: C.primaryLight,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 22,
-                  flexShrink: 0
-                }}
-              >
-                {icon}
-              </div>
-
-              <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 900,
-                    color: C.text,
-                    marginBottom: 4
-                  }}
-                >
-                  {title}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: C.textLight,
-                    lineHeight: 1.5
-                  }}
-                >
-                  {desc}
-                </div>
-              </div>
-            </div>
-          ))}
+        {role === "pharmacy" && verification === "approved" ? (
+  <PharmacyRequestsPanel lang={lang} />
+) : (
+  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    {current.cards.map(([icon, title, desc]) => (
+      <div
+        key={title}
+        style={{
+          background: C.white,
+          border: "1px solid " + C.border,
+          borderRadius: 16,
+          padding: 15,
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          boxShadow: C.shadow
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: C.primaryLight,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+            flexShrink: 0
+          }}
+        >
+          {icon}
         </div>
+
+        <div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 900,
+              color: C.text,
+              marginBottom: 4
+            }}
+          >
+            {title}
+          </div>
+
+          <div
+            style={{
+              fontSize: 12,
+              color: C.textLight,
+              lineHeight: 1.5
+            }}
+          >
+            {desc}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
         <div
           style={{
