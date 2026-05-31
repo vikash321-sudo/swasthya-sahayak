@@ -14,6 +14,7 @@ import Drawer from "./components/Drawer";
 import VoiceInput from "./components/VoiceInput";
 import ServicesScreen from "./screens/ServicesScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import RoleDashboard from "./screens/RoleDashboard";
 import {
   symptomIdsFromText,
   uniqueIds,
@@ -1688,6 +1689,22 @@ export default function App() {
   }
 
   if (!user) return <AuthScreen onLogin={(u) => { setUser(u); setLang(u.lang || "en"); }} />;
+  const currentRole = user?.role || "member";
+
+if (currentRole !== "member") {
+  return (
+    <RoleDashboard
+      user={user}
+      lang={lang}
+      onLangChange={handleLangChange}
+      onLogout={async () => {
+        await supabase.auth.signOut();
+        localStorage.removeItem("ss_user");
+        setUser(null);
+      }}
+    />
+  );
+}
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", maxWidth: 480, margin: "0 auto", position: "relative", fontFamily: "'Inter','Noto Sans Devanagari','Segoe UI',system-ui,sans-serif", color: C.text }}>
